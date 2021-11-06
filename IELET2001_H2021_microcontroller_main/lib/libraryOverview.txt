@@ -1,0 +1,10 @@
+
+
+// 
+
+Library dependencies
+    
+    1. NEO-6M GPS Library
+        https://www.arduino.cc/reference/en/libraries/neo-6m_gps/
+
+    

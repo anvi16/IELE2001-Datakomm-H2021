@@ -2,6 +2,8 @@
 #ifndef SENSORS_EXT
 #define SENSORS_EXT
 
+
+
 class GPS{
     
     private:
@@ -14,17 +16,6 @@ class GPS{
 };
 
 
-class GPS{
-    
-    private:
-
-
-    public:
-
-    int getLatitude();
-    int getLongitude();
-
-};
 
 
 
