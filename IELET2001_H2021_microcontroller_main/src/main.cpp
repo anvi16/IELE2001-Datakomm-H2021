@@ -1,29 +1,29 @@
-#include <Arduino.h>
+
 #include <TinyGPS++.h>
 #include <SoftwareSerial.h>
 #include "sensors_ext.h"
+#include "config.h"
 
 // GPS
 TinyGPSPlus gps; // The TinyGPS++ object
 
 // Software Serial 
 // Because the hardware-based serial communication pins are busy, we create new by using the SoftwareSerial library
-static const int RXPin =    21;
-static const int TXPin =    22;
-static const uint32_t GPSBaud = 9600;
-SoftwareSerial ssGPS(RXPin, TXPin);            // Create software-based serial communication on pins
 
-const int LEDPin =          12;
+SoftwareSerial ssGPS(rxGPS, txGPS);            // Create software-based serial communication on pins
+
 
 void setup() {
   
-  Serial.begin(9600);
-  pinMode(LEDPin, OUTPUT);
+  Serial.begin(serialBaud);
 
   // Set baud rate for GPS communication
   ssGPS.begin(GPSBaud); // Serial communication with GPS module
 
 }
+
+
+
 
 
 

@@ -1,8 +1,5 @@
 
-#ifndef SENSORS_EXT
-#define SENSORS_EXT
-
-
+#pragma once
 
 class GPS{
     
@@ -17,11 +14,3 @@ class GPS{
 
 
 
-
-
-
-
-
-
-
-#endif
