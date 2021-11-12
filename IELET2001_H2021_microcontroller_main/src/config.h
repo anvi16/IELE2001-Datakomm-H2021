@@ -12,12 +12,13 @@
 //////////////////////////////////////////////////////
 
 // I2C interface pins
-static const int i2cSDA =    21;
-static const int i2cSCL =    22;
+const int i2cSDA =    21;
+const int i2cSCL =    22;
 
 // GPS
-static const int rxGPS =    37;
-static const int txGPS =    38;
+const int psGPS =    25;     // Power supply pin for GPS sensor ---------- SELECT OTHER PIN !
+const int rxGPS =    37;     // Serial recieve pin GPS
+const int txGPS =    38;     // Serial transmit pin GPS
 
 
 
