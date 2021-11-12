@@ -20,7 +20,8 @@ SoftwareSerial ssGPS(RXPin, TXPin);            // Create software-based serial c
 
 const int LEDPin =          12;
 
-// Functionaly the same as the "delay()" function. D
+// Functionaly the same as the "delay()" function. The diffrence is that instead of just waiting the ESP enters light sleep.This reduces the power consumption compared to the regular delay function
+
 void espDelay(int ms)
 {
   esp_sleep_enable_timer_wakeup(ms * 1000);
@@ -38,11 +39,10 @@ void setup() {
 
   tft.init();
   tft.setRotation(1);
-  tft.fillScreen(TFT_WHITE);
+  tft.fillScreen(TFT_BLACK);
   tft.setTextSize(2);
-  tft.setCursor(10, 10);
+  tft.setCursor(0, 0);
   tft.setTextColor(TFT_GREEN);
-  tft.print("Test");
 }
 
 
