@@ -8,13 +8,9 @@
 #ifndef CLUSTER_COM_H
 #define CLUSTER_COM_H
 
-#if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
-#else
-#include "WProgram.h"
-#endif
-
 #include <stdint.h>
+//#include <lib/RadioHead-master/
 #include "lib/RadioHead-master/RH_ASK.h"
 #include "lib/RadioHead-master/RHEncryptedDriver.h"
 #include "lib/RadioHead-master/RHReliableDatagram.h"
