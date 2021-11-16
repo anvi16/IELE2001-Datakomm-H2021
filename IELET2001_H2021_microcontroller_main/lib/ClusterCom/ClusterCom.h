@@ -10,14 +10,12 @@
 
 #include "Arduino.h"
 #include <stdint.h>
-//#include <lib/RadioHead-master/
 #include "lib/RadioHead-master/RH_ASK.h"
 #include "lib/RadioHead-master/RHEncryptedDriver.h"
 #include "lib/RadioHead-master/RHReliableDatagram.h"
 #include "lib/ArduinoJson-6.x/ArduinoJson.h"
 #include "lib/Crypto/src/AES.h"
 #include <SPI.h>
-
 
 #define MAX_PACKET_SIZE 47
 //#define DEBUG
