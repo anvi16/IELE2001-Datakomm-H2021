@@ -4,7 +4,29 @@
 
 Library dependencies
     
-    1. NEO-6M GPS Library
-        https://www.arduino.cc/reference/en/libraries/neo-6m_gps/
+    1. TinyGPS++    
+        About:      Easy extraction of GPS data
+        Author:     Mikal Hart
+        URL:        https://github.com/mikalhart/TinyGPSPlus
+        Guides:     http://arduiniana.org/libraries/tinygpsplus/
 
+    2. ESP SoftwareSerial
+        About:      For software-generated serial communication on all pins      
+        Author:     Dirk Kaar, Peter Lerup
+        URL:        https://github.com/plerup/espsoftwareserial/
+        Guides:    
     
+    3. Time
+        About:      Arduino time functions    
+        Author:     Michael Margolis, Paul Stoffregen  
+        URL:        http://playground.arduino.cc/Code/Time/ 
+        Guides:
+
+
+
+        
+    x. NAME
+        About:      
+        Author:     
+        URL:        
+        Guides: 
