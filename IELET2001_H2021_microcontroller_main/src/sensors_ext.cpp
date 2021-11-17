@@ -189,6 +189,9 @@ unsigned long GPS::getTimeAge(){
     return timeAge;
 }
 
+void GPS::syncDateTime(){
+    
+}
 
 
 
