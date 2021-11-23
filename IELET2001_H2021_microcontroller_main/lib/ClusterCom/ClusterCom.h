@@ -17,6 +17,9 @@
 #include "lib/Crypto/src/AES.h"
 #include <SPI.h>
 
+// Ensure ArduinoJSON Lib Intellisense works correctly
+#define ARDUINOJSON_ENABLE_STD_STREAM 0
+
 #define MAX_PACKET_SIZE 47
 //#define DEBUG
 
@@ -25,6 +28,7 @@ class ClusterCom {
 
   public:
 
+	// Message Type
     enum MT : uint8_t
     {
 	    PING  = 1,
@@ -34,31 +38,31 @@ class ClusterCom {
 	    DATA  = 5
     };
 
-	ClusterCom(uint8_t id, uint32_t serialBaud = 9600, uint8_t pin_rx = 26, uint8_t pin_tx = 27);
+	ClusterCom(uint8_t id = 0, uint32_t serialBaud = 9600, uint8_t pinRx = 27, uint8_t pinTx = 26);
 
-	void begin();
-	void send(uint8_t receiver, const char* msg = nullptr, MT mt = DATA);
+	void begin(const char* encryptkey = nullptr, uint8_t id = 0);
+	bool send(uint8_t receiver, const char* msg = nullptr, MT mt = DATA);
 	bool available();
 	String output();
 
   private:
-
-	RH_ASK rf_com;
-	// You can choose any of several encryption ciphers
-	AES128 aes128;   // Instantiate AES128 block ciphering
+	// Instantiate ASK communication 
+	RH_ASK rfCom;
+	// Instantiate AES128 block ciphering
+	AES128 aes128;   
 	// The RHEncryptedDriver acts as a wrapper for the actual radio driver
 	RHEncryptedDriver driver;
 	// Class to manage message delivery and receipt, using the driver declared above
 	RHReliableDatagram manager;
-	// The key MUST be the same as the one in the server
-	unsigned char encryptkey[16] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 };
+	// The key MUST be the same on all devices
+	unsigned char _encryptkey[16] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 };
 
 	uint8_t _buf[RH_ASK_MAX_MESSAGE_LEN];
 
 	uint32_t _serialBaud;
-	uint8_t _pin_rx; // interrupt pin to receive data
-	uint8_t _pin_tx;
-	uint8_t _id; // device id
+	uint8_t _pinRx; // Serial interrupt pin to receive data
+	uint8_t _pinTx; // Serial pin to transmitt data
+	uint8_t _id; // Device id
 
 };
 #endif

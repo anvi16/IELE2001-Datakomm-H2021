@@ -26,20 +26,27 @@ WeatherStation ws(i2cBME280Adr);
 // Ubidots object
 Ubidots ubidots(UBIDOTS_TOKEN);
 
-
+String callbackPayload = "";
 /****************************************
  * Auxiliar Functions
  ****************************************/
 
 void callback(char *topic, byte *payload, unsigned int length)
 {
+  callbackPayload = "";
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
-  for (int i = 0; i < length; i++)
-  {
-    Serial.print((char)payload[i]);
+
+  for (int i = 0; i < length; i++) {
+    callbackPayload.concat((char)payload[i]);
   }
+  // Serial.println(callbackPayload);
+
+  // for (int i = 0; i < length; i++)
+  // {
+  //   Serial.print((char)payload[i]);
+  // }
   Serial.println();
 }
 
@@ -71,7 +78,10 @@ void setup() {
   // Enable external sensors
   gps.enable();                                 // Power up GPS module and establish serial com 
   ws.enable();                                  // Establish I2C com with Weather Station
+  
 }
+
+bool firstScan = HIGH;
 
 
 void loop(){
@@ -86,9 +96,12 @@ void loop(){
   tft.setTextColor(TFT_GREEN);
   tft.print("Test");
 
+
   // Ubidots
   if (!ubidots.connected()){                    // Reconnect to ubidots 
-    ubidots.reconnect();}
+    ubidots.reconnect();
+    ubidots.subscribe("/v2.0/devices/3/temperature/lv");
+    }
 
   if (abs(millis() - ubiPubTS) > ubiPubFreq) // triggers the routine every 5 seconds
   {
@@ -100,11 +113,19 @@ void loop(){
     // Ubidots publish
     //          "Variable label"  "Value"         "Context"
     ubidots.add("gps",            1,              gpsData   );  // Generate / update GPS variable in Ubidots 
-    ubidots.add("Temperature",    ws.getTempC()             );  // Generate / update temperature variable in Ubidots
+    ubidots.add("temperature",    ws.getTempC()             );  // Generate / update temperature variable in Ubidots
     ubidots.add("Humidity",       ws.getHum()               );  // Generate / update humidity variable in Ubidots
     ubidots.add("Pressure [hPa]", ws.getPressHPa()          );  // Generate / update pressure variable in Ubidots
 
-    ubidots.publish(DEVICE_LABEL);              // Publish buffer to Ubidots
+    // ubidots.publish(DEVICE_LABEL);              // Publish buffer to Ubidots
+    ubidots.publish("3");              // Publish buffer to Ubidots
+
+    // Serial.println();
+    // Serial.println("SUB: ");
+    // Serial.println(ubidots.subscribe("/v2.0/devices/3/temperature/lv"));
+    // Serial.println();
+
+    ubidots.subscribe("/v2.0/devices/3/temperature/lv");
 
     ubiPubTS = millis();
   }
@@ -147,6 +168,9 @@ void loop(){
   Serial.print("Current hum:       ");
   Serial.println(ws.getHum());
 
+  Serial.println();
+  Serial.print("MQTT payload size: ");
+  Serial.println(sizeof(callbackPayload));
   Serial.println();
 
   delay(0);

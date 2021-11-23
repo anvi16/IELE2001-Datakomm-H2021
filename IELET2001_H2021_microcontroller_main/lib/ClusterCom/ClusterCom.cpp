@@ -8,27 +8,44 @@
 #include "ClusterCom.h"
 
 
-ClusterCom::ClusterCom(uint8_t id, uint32_t serialBaud, uint8_t pin_rx, uint8_t pin_tx) :
-	rf_com(2000, pin_rx, pin_tx, 0),
-    driver(rf_com, aes128),
+ClusterCom::ClusterCom(uint8_t id, uint32_t serialBaud, uint8_t pinRx, uint8_t pinTx) :
+	rfCom(2000, pinRx, pinTx, 0),
+    driver(rfCom, aes128),
     manager(driver, id)
 {
 	_id = id;
 	_serialBaud = serialBaud;
-    _pin_rx = pin_rx;
-    _pin_tx = pin_tx;
+    _pinRx = pinRx;
+    _pinTx = pinTx;
 }
 
-void ClusterCom::begin()
+// Encryption string must be 16 + 5 prefix char long
+void ClusterCom::begin(const char* encryptkey, uint8_t id)
 {
     Serial.begin(_serialBaud);
+
+    // Set device id after constructor
+    _id = id;
+    manager.setThisAddress(id);
     manager.init();
 
-    // Now set up the encryption key in our cipher
-    aes128.setKey(encryptkey, sizeof(encryptkey));
+    // Now set up the encryption key in cipher
+    if (encryptkey != nullptr) 
+    {
+        size_t n = sizeof(_encryptkey)/sizeof(_encryptkey[0]);
+
+        // Copy n elements of user choosen encryptkey to internall storage
+        for (int i=0; i < n; i++){
+            _encryptkey[i] = encryptkey[i+5];
+        }
+        aes128.setKey(_encryptkey, sizeof(_encryptkey));
+    }
+    else
+        // Use predefined encryptkey to library
+        aes128.setKey(_encryptkey, sizeof(_encryptkey));
 }
 
-void ClusterCom::send(uint8_t receiver, const char* msg, MT mt)
+bool ClusterCom::send(uint8_t receiver, const char* msg, MT mt)
 {
 
     StaticJsonDocument<MAX_PACKET_SIZE> Json_Buffer;
@@ -43,27 +60,32 @@ void ClusterCom::send(uint8_t receiver, const char* msg, MT mt)
 		Serial.println(n);
 	#endif
 
-    try {
-        if (n <= MAX_PACKET_SIZE) {
-            // Send message
-            if (!manager.sendtoWait((uint8_t*)buffer, n, receiver)) Serial.println("sendtoWait failed");
-			#ifdef DEBUG
-				else Serial.println("ACK");
-			#endif
+    if (n <= MAX_PACKET_SIZE) {
+        // Send message
+        if (manager.sendtoWait((uint8_t*)buffer, n, receiver)) 
+        {
+            #ifdef DEBUG
+                Serial.println("ACK");
+            #endif
+
+            return true;
         }
-        else {
-            throw n;
+        #ifdef DEBUG
+            else Serial.println("sendtoWait failed");
+        #endif
+    }
+    #ifdef DEBUG
+        else 
+        {
+            Serial.println("------ERROR-------");
+            Serial.println("Message is to large, try to increase \"MAX_PACKET_SIZE\" ");
+            Serial.print("Tried to send: ");
+            Serial.print(n);
+            Serial.print("bytes");
         }
-    }
-    catch (int n) {
-		#ifdef DEBUG
-	        Serial.println("------ERROR-------");
-	        Serial.println("Message is to large, try to increase \"MAX_PACKET_SIZE\" ");
-	        Serial.print("Tried to send: ");
-	        Serial.print(n);
-	        Serial.print("bytes");
-		#endif
-    }
+    #endif
+
+    return false;
 }
 
 
@@ -74,7 +96,7 @@ bool ClusterCom::available()
 
     if (manager.available())
     {
-        // Wait for a message addressed to us from the client
+        // Wait for a message addressed to client
         if (manager.recvfromAck(_buf, &len, &from))
         {
 			#ifdef DEBUG

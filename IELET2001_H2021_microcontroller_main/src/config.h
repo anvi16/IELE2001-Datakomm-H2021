@@ -10,14 +10,14 @@
 //////////////////////////////////////////////////////
 
 // I2C interface pins
-const int i2cSDA =          21;   // Green wire
-const int i2cSCL =          22;   // Yellow wire
-const int i2cBME280Adr =    0x76; // BME280 adress
+const int i2cSDA =          21;         // Green wire
+const int i2cSCL =          22;         // Yellow wire
+const int i2cBME280Adr =    0x76;       // BME280 adress
 
 // GPS
-const int psGPS =    25;          // Power supply pin for GPS sensor
-const int rxGPS =    37;          // Serial recieve pin GPS
-const int txGPS =    38;          // Serial transmit pin GPS
+const int psGPS =           25;         // Power supply pin for GPS sensor
+const int rxGPS =           37;         // Serial recieve pin GPS
+const int txGPS =           38;         // Serial transmit pin GPS
 
 
 //////////////////////////////////////////////////////
@@ -62,5 +62,8 @@ unsigned long ubiPubTS;                                                 // Ubido
 // const char *WIFI_SSID = "Inteno-D81D";                               // WiFi : SSID Latinskolegata 1, Aalesund
 // const char *WIFI_PASS = "XJRBC6IITC42CO";                            // WiFi : PW   Latinskolegata 1, Aalesund
 
-const char *WIFI_SSID = "Playboy Penthouse Solsiden";                   // WiFi : SSID Dyre Halses gate 4, Trondheim
-const char *WIFI_PASS = "hughhefner";                                   // WiFi : PW   Dyre Halses gate 4, Trondheim
+// const char *WIFI_SSID = "Playboy Penthouse Solsiden";                   // WiFi : SSID Dyre Halses gate 4, Trondheim
+// const char *WIFI_PASS = "hughhefner";                                   // WiFi : PW   Dyre Halses gate 4, Trondheim
+
+const char *WIFI_SSID = "ClusterNet";                                   // WiFi : SSID General cluster network
+const char *WIFI_PASS = "ClusterNet";                                   // WiFi : PW   General cluster network
