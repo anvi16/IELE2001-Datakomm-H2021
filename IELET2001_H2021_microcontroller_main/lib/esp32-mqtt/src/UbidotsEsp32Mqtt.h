@@ -21,6 +21,9 @@ Created by: Jose Garcia @jotathebest at github: https://github.com/jotathebest
 
 #ifndef UbidotsESP32MQTT_H
 #define UbidotsESP32MQTT_H
+
+#define LWIP_DONT_PROVIDE_BYTEORDER_FUNCTIONS   // Removed BYTEORDER_FUNCTIONS because it clashed with Crypto library
+
 #include <PubSubClient.h>
 #include <WiFi.h>
 

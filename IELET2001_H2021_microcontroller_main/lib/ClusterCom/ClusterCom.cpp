@@ -8,7 +8,7 @@
 #include "ClusterCom.h"
 
 
-ClusterCom::ClusterCom(uint8_t id, uint32_t serialBaud, uint8_t pinRx, uint8_t pinTx) :
+ClusterCom::ClusterCom(uint8_t pinRx, uint8_t pinTx, uint32_t serialBaud, uint8_t id) :
 	rfCom(2000, pinRx, pinTx, 0),
     driver(rfCom, aes128),
     manager(driver, id)
@@ -89,7 +89,7 @@ bool ClusterCom::send(uint8_t receiver, const char* msg, MT mt)
 }
 
 
-bool ClusterCom::available()
+bool ClusterCom::available(uint8_t &mt, String &msg)
 {
     uint8_t from;
     uint8_t len = sizeof(_buf);
@@ -106,18 +106,31 @@ bool ClusterCom::available()
 	            Serial.println((char*)_buf);
             #endif
 
+            mt = messageType();
+            msg = message();
+
             return true;
         }
     }
     return false;
 }
 
-String ClusterCom::output()
+
+String ClusterCom::message()
 {
     StaticJsonDocument<MAX_PACKET_SIZE> Json_Buffer;
 	deserializeJson(Json_Buffer, _buf, sizeof(_buf));
 
 	return Json_Buffer["msg"];
+}
+
+
+uint8_t ClusterCom::messageType()
+{
+    StaticJsonDocument<MAX_PACKET_SIZE> Json_Buffer;
+	deserializeJson(Json_Buffer, _buf, sizeof(_buf));
+
+	return (uint8_t)Json_Buffer["mt"];
 }
 
 

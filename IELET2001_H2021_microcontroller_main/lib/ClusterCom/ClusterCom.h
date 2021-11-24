@@ -8,17 +8,17 @@
 #ifndef CLUSTER_COM_H
 #define CLUSTER_COM_H
 
-#include "Arduino.h"
-#include <stdint.h>
-#include "lib/RadioHead-master/RH_ASK.h"
-#include "lib/RadioHead-master/RHEncryptedDriver.h"
-#include "lib/RadioHead-master/RHReliableDatagram.h"
-#include "lib/ArduinoJson-6.x/ArduinoJson.h"
-#include "lib/Crypto/src/AES.h"
-#include <SPI.h>
-
 // Ensure ArduinoJSON Lib Intellisense works correctly
 #define ARDUINOJSON_ENABLE_STD_STREAM 0
+
+#include <Arduino.h>
+#include <stdint.h>
+#include <RH_ASK.h>
+#include <RHEncryptedDriver.h>
+#include <RHReliableDatagram.h>
+#include <ArduinoJson.h>
+#include <AES.h>
+#include <SPI.h>
 
 #define MAX_PACKET_SIZE 47
 //#define DEBUG
@@ -38,14 +38,16 @@ class ClusterCom {
 	    DATA  = 5
     };
 
-	ClusterCom(uint8_t id = 0, uint32_t serialBaud = 9600, uint8_t pinRx = 27, uint8_t pinTx = 26);
+	ClusterCom(uint8_t pinRx = 27, uint8_t pinTx = 26, uint32_t serialBaud = 9600, uint8_t id = 0);
 
 	void begin(const char* encryptkey = nullptr, uint8_t id = 0);
 	bool send(uint8_t receiver, const char* msg = nullptr, MT mt = DATA);
-	bool available();
-	String output();
+	bool available(uint8_t &mt, String &msg);
 
   private:
+	String message();
+	uint8_t messageType();
+
 	// Instantiate ASK communication 
 	RH_ASK rfCom;
 	// Instantiate AES128 block ciphering

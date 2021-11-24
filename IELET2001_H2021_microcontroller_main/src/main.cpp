@@ -3,7 +3,8 @@
 #include <Arduino.h>                            // General Arduino C++ lib
 #include <TinyGPS++.h>                          // GPS lib for easy extraction of GPS data
 #include <SoftwareSerial.h>                     // Software serial lib (for serial com on any pin)
-#include <time.h>                               // Time lib Arduino
+#include <TimeLib.h>                            // Time lib Arduino
+#include <ClusterCom.h>                         // ClusterCom library for peer to peer communicatision
 #include <cstdio>
 #include <iostream>                            
 #include <TFT_eSPI.h>                           // TFT lib for control of OLED screen
@@ -26,12 +27,28 @@ WeatherStation ws(i2cBME280Adr);
 // Ubidots object
 Ubidots ubidots(UBIDOTS_TOKEN);
 
+// ClusterCom object
+ClusterCom CCom(rxRF, txRF, serialBaud);
+
+
+/****************************************
+ * Variabels Functions
+ ****************************************/
 String callbackPayload = "";
+bool firstScan = HIGH;
+
+// ClusterCom
+uint8_t id;         // Device id
+String msg;         // Buffer for incoming message
+uint8_t mt;         // Buffer for messageType
+
+
+
 /****************************************
  * Auxiliar Functions
  ****************************************/
 
-void callback(char *topic, byte *payload, unsigned int length)
+void UbisoftCallback(char *topic, byte *payload, unsigned int length)
 {
   callbackPayload = "";
   Serial.print("Message arrived [");
@@ -60,32 +77,9 @@ void espDelay(int ms)
   esp_light_sleep_start();
 }
 
-// Setup
-void setup() {
-  
-  // Start serial communication with microcontroller
-  Serial.begin(serialBaud);                     
-  Serial.println("Booting up");   
 
-  // Ubidots 
-  // ubidots.setDebug(true);  // uncomment this to make debug messages available
-  ubidots.connectToWifi(WIFI_SSID, WIFI_PASS);
-  ubidots.setCallback(callback);
-  ubidots.setup();
-  ubidots.reconnect();
-  ubiPubTS = millis();           
-
-  // Enable external sensors
-  gps.enable();                                 // Power up GPS module and establish serial com 
-  ws.enable();                                  // Establish I2C com with Weather Station
-  
-}
-
-bool firstScan = HIGH;
-
-
-void loop(){
-
+void auxLoop()
+{
   gps.refresh();                                // Update data from GPS
 
   tft.init();
@@ -95,15 +89,19 @@ void loop(){
   tft.setCursor(10, 10);
   tft.setTextColor(TFT_GREEN);
   tft.print("Test");
+}
 
 
+void commLoop()
+{
   // Ubidots
   if (!ubidots.connected()){                    // Reconnect to ubidots 
     ubidots.reconnect();
     ubidots.subscribe("/v2.0/devices/3/temperature/lv");
-    }
+  }
 
-  if (abs(millis() - ubiPubTS) > ubiPubFreq) // triggers the routine every 5 seconds
+  // triggers the routine every 5 seconds
+  if (abs(millis() - ubiPubTS) > ubiPubFreq) 
   {
     char gpsData[1000] = "";
     
@@ -129,11 +127,22 @@ void loop(){
 
     ubiPubTS = millis();
   }
-
-
   ubidots.loop();
 
-  // Print position
+  // Recive incomming messages from RF module
+  if(CCom.available(mt, msg))
+  {
+    Serial.println(mt);
+    Serial.println(msg);
+  }
+
+
+}
+
+
+void serialPrints()
+{
+    // Print position
   Serial.print("Current position:  ");
   Serial.print(gps.getLatitude(),6);
   Serial.print("N, ");
@@ -172,14 +181,47 @@ void loop(){
   Serial.print("MQTT payload size: ");
   Serial.println(sizeof(callbackPayload));
   Serial.println();
-
-  delay(0);
-
 }
 
 
 
+/****************************************
+ * Main Functions
+ ****************************************/
+// Setup
+void setup() {
+  
+  // Start serial communication with microcontroller
+  Serial.begin(serialBaud);                     
+  Serial.println("Booting up");   
 
+  // Ubidots 
+  // ubidots.setDebug(true);  // uncomment this to make debug messages available
+  ubidots.connectToWifi(WIFI_SSID, WIFI_PASS);
+  ubidots.setCallback(UbisoftCallback);
+  ubidots.setup();
+  ubidots.reconnect();
+  ubiPubTS = millis();      
+
+  // ClusterCom / setup crypt key and device id
+  CCom.begin(UBIDOTS_TOKEN, id);     
+
+  // Enable external sensors
+  gps.enable();                                 // Power up GPS module and establish serial com 
+  ws.enable();                                  // Establish I2C com with Weather Station
+  
+}
+
+
+void loop(){
+  
+  auxLoop();                                    // Loop all auxiliary utensils
+  commLoop();                                   // Loop communication utensils
+  serialPrints();                               // Run all desired prints
+
+
+  delay(0);
+}
 
 
 
