@@ -3,8 +3,6 @@
 
 #include <Arduino.h>
 
-
-
 //////////////////////////////////////////////////////
 //                                                  //
 //                  DEFINE HARDWARE                 //
@@ -12,15 +10,18 @@
 //////////////////////////////////////////////////////
 
 // I2C interface pins
-const int i2cSDA =          21;   // Green wire
-const int i2cSCL =          22;   // Yellow wire
-const int i2cBME280Adr =    0x76; // BME280 adress
+const int i2cSDA =          21;         // Green wire
+const int i2cSCL =          22;         // Yellow wire
+const int i2cBME280Adr =    0x76;       // BME280 adress
 
 // GPS
-const int psGPS =    25;          // Power supply pin for GPS sensor ---------- SELECT OTHER PIN !
-const int rxGPS =    37;          // Serial recieve pin GPS
-const int txGPS =    38;          // Serial transmit pin GPS
+const int psGPS =           25;         // Power supply pin for GPS sensor
+const int rxGPS =           37;         // Serial recieve pin GPS
+const int txGPS =           38;         // Serial transmit pin GPS
 
+// RF module
+const int rxRF =           27;         // Serial recieve pin RF
+const int txRF =           26;         // Serial transmit pin RF
 
 //////////////////////////////////////////////////////
 //                                                  //
@@ -28,12 +29,11 @@ const int txGPS =    38;          // Serial transmit pin GPS
 //                                                  //
 //////////////////////////////////////////////////////
 
-// GPS
+// Serial communication
 static const uint32_t serialBaud = 9600;
+
+// GPS
 static const uint32_t GPSBaud = 9600;
-
-
-
 
 
 //////////////////////////////////////////////////////
@@ -45,20 +45,31 @@ static const uint32_t GPSBaud = 9600;
 // Based on example https://help.ubidots.com/en/articles/748067-connect-an-esp32-devkitc-to-ubidots-over-mqtt
 
 // Library dependencies
-
 #include <UbidotsEsp32Mqtt.h>
 
-/****************************************
- * Define Constants
- ****************************************/
-const char *UBIDOTS_TOKEN = "BBFF-pzGZkRPVMO7baDRylwiST623Ow5DrF";  // Put here your Ubidots TOKEN
-const char *WIFI_SSID = "Inteno-D81D";      // Put here your Wi-Fi SSID
-const char *WIFI_PASS = "XJRBC6IITC42CO";   // Put here your Wi-Fi password
-const char *DEVICE_LABEL = "Aalesund";       // Put here your Device label to which data will be published
-const char *VARIABLE_LABEL = "Temperature";        // Put here your Variable label to which data  will be published
+// Publish variables
+const char *UBIDOTS_TOKEN = "BBFF-pzGZkRPVMO7baDRylwiST623Ow5DrF";      // Token corresponding to IELET2001 2021 gr30
+const char *DEVICE_LABEL = "Aalesund";                                  // Ubidots: Device label to which data will be published
+const int ubiPubFreq = 5000;                                            // Ubidots: Publish rate (ms between pub)
+unsigned long ubiPubTS;                                                 // Ubidots: Timestamp for last publish
 
-const int PUBLISH_FREQUENCY = 5000;         // Update rate in milliseconds
 
-unsigned long timer;
+//////////////////////////////////////////////////////
+//                                                  //
+//                       WiFi                       //
+//                                                  //
+//////////////////////////////////////////////////////
+
+// List of WiFi networks commonly used during development
+
+// const char *WIFI_SSID = "Inteno-D81D";                               // WiFi : SSID Latinskolegata 1, Aalesund
+// const char *WIFI_PASS = "XJRBC6IITC42CO";                            // WiFi : PW   Latinskolegata 1, Aalesund
+
+// const char *WIFI_SSID = "Playboy Penthouse Solsiden";                   // WiFi : SSID Dyre Halses gate 4, Trondheim
+// const char *WIFI_PASS = "hughhefner";                                   // WiFi : PW   Dyre Halses gate 4, Trondheim
+
+const char *WIFI_SSID = "ClusterNet";                                   // WiFi : SSID General cluster network
+const char *WIFI_PASS = "ClusterNet";                                   // WiFi : PW   General cluster network
+
 
 
