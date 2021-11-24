@@ -4,7 +4,6 @@
 #include <TinyGPS++.h>                          // GPS lib for easy extraction of GPS data
 #include <SoftwareSerial.h>                     // Software serial lib (for serial com on any pin)
 #include <TimeLib.h>                            // Time lib Arduino
-#include <ClusterCom.h>                         // ClusterCom library for peer to peer communicatision
 #include <cstdio>
 #include <iostream>                            
 #include <TFT_eSPI.h>                           // TFT lib for control of OLED screen
@@ -12,8 +11,9 @@
 #include <Wire.h>
 
 // Include files with dependencies
-#include "sensors_ext.h"                        // File containging classes related to peripheral sensors (GPS, temp, hum, press)
-#include "config.h"                             // Config file for HW pins, baud etc.
+#include "PurpaceMadeLib/sensors_ext/sensors_ext.h"         // File containging classes related to peripheral sensors (GPS, temp, hum, press)
+#include "PurpaceMadeLib/ClusterCom/ClusterCom.h"           // ClusterCom library for peer to peer communicatision
+#include "config.h"                                         // Config file for HW pins, baud etc.
 
 // TFT class for OLED display control
 TFT_eSPI tft = TFT_eSPI(135, 240);
@@ -80,7 +80,7 @@ void espDelay(int ms)
 
 void auxLoop()
 {
-  gps.refresh();                                // Update data from GPS
+  gps.refresh(HIGH);                                // Update data from GPS
 
   tft.init();
   tft.setRotation(1);
