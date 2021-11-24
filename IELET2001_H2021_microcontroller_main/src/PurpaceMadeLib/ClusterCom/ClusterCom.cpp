@@ -8,7 +8,7 @@
 #include "ClusterCom.h"
 
 
-ClusterCom::ClusterCom(uint8_t pinRx, uint8_t pinTx, uint32_t serialBaud, uint8_t id) :
+ClusterCom::ClusterCom(uint8_t pinRx, uint8_t pinTx, uint8_t pwrRx, uint8_t pwrTx, uint32_t serialBaud, uint8_t id) :
 	rfCom(2000, pinRx, pinTx, 0),
     driver(rfCom, aes128),
     manager(driver, id)
@@ -17,12 +17,16 @@ ClusterCom::ClusterCom(uint8_t pinRx, uint8_t pinTx, uint32_t serialBaud, uint8_
 	_serialBaud = serialBaud;
     _pinRx = pinRx;
     _pinTx = pinTx;
+    _pwrRx = pwrRx;
+    _pwrTx = pwrTx;
 }
 
 // Encryption string must be 16 + 5 prefix char long
 void ClusterCom::begin(const char* encryptkey, uint8_t id)
 {
     Serial.begin(_serialBaud);
+    pinMode(_pwrTx,OUTPUT);     // Set pinmode for control of power supply transmitter
+    pinMode(_pwrRx,OUTPUT);     // Set pinmode for control of power supply reciever
 
     // Set device id after constructor
     _id = id;
@@ -133,4 +137,26 @@ uint8_t ClusterCom::messageType()
 	return (uint8_t)Json_Buffer["mt"];
 }
 
+void ClusterCom::enable(){
+    #ifdef DEBUG
+        Serial.println("Enabling radio transmission modules");
+    #endif
+    digitalWrite(_pwrTx, HIGH);               // Powering up radio transmission module
+    digitalWrite(_pwrRx, HIGH);               // Powering up radio reciever module
+    #ifdef DEBUG
+        Serial.println("Radio transmission modules powered up");
+    #endif
 
+}
+
+void ClusterCom::disable(){
+    #ifdef DEBUG
+        Serial.println("Disabling radio transmission modules");
+    #endif
+    digitalWrite(_pwrTx, LOW);               // Powering down radio transmission module
+    digitalWrite(_pwrRx, LOW);               // Powering down radio reciever module
+    #ifdef DEBUG
+        Serial.println("Radio transmission modules powered down");
+    #endif
+
+}

@@ -21,8 +21,7 @@
 #include <SPI.h>
 
 #define MAX_PACKET_SIZE 47
-//#define DEBUG
-
+#define DEBUG
 
 class ClusterCom {
 
@@ -38,11 +37,13 @@ class ClusterCom {
 	    DATA  = 5
     };
 
-	ClusterCom(uint8_t pinRx = 27, uint8_t pinTx = 26, uint32_t serialBaud = 9600, uint8_t id = 0);
+	ClusterCom(uint8_t pinRx = 27, uint8_t pinTx = 26, uint8_t pwrRx = 14, uint8_t pwrTx = 13, uint32_t serialBaud = 9600, uint8_t id = 0);
 
 	void begin(const char* encryptkey = nullptr, uint8_t id = 0);
 	bool send(uint8_t receiver, const char* msg = nullptr, MT mt = DATA);
 	bool available(uint8_t &mt, String &msg);
+	void enable();
+	void disable();
 
   private:
 	String message();
@@ -64,6 +65,8 @@ class ClusterCom {
 	uint32_t _serialBaud;
 	uint8_t _pinRx; // Serial interrupt pin to receive data
 	uint8_t _pinTx; // Serial pin to transmitt data
+	uint8_t _pwrRx; // Power pin, enable/disable  RF reciver module
+	uint8_t _pwrTx; // Power pin, enable/disable RF transmitter module
 	uint8_t _id; // Device id
 
 };

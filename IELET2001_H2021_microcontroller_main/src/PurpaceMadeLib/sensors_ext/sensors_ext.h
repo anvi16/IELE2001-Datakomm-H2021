@@ -1,10 +1,16 @@
 
 #pragma once
 
+
 #include <TinyGPS++.h>
 #include <SoftwareSerial.h>
 #include <Adafruit_BME280.h>
 #include <TimeLib.h>
+
+#ifndef DEBUG
+#define DEBUG
+#endif
+
 
 class GPS{
     
@@ -121,11 +127,7 @@ class GPS{
 
                             
         unsigned long getTimeAge();
-
-
-
-        // Synchronizing internal ESP32 clock with satellite
-        void syncDateTime();                
+              
 
 };
 
@@ -164,9 +166,25 @@ class WeatherStation{
         float getHum();      
 
         // Returns an average pressure [hPa] based on [nRead] readings
-        float getPressHPa();                  
+        float getPressHPa(); 
+
+                         
 
 
+
+};
+
+
+struct WeatherData{
+
+    int id;
+
+    float temp;
+    float hum;
+    float press;
+    float lat;
+    float lng;
+    float alt;
 
 };
 

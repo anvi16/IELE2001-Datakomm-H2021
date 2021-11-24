@@ -3,6 +3,9 @@
 
 #include <Arduino.h>
 
+// Uncomment to enable debug in program
+
+
 //////////////////////////////////////////////////////
 //                                                  //
 //                  DEFINE HARDWARE                 //
@@ -15,13 +18,16 @@ const int i2cSCL =          22;         // Yellow wire
 const int i2cBME280Adr =    0x76;       // BME280 adress
 
 // GPS
-const int psGPS =           25;         // Power supply pin for GPS sensor
-const int rxGPS =           37;         // Serial recieve pin GPS
-const int txGPS =           38;         // Serial transmit pin GPS
+const int psGPS =           17;         // Power supply pin for GPS sensor
+const int rxGPS =           12;         // Serial recieve pin GPS
+const int txGPS =           13;         // Serial transmit pin GPS
 
 // RF module
 const int rxRF =           27;         // Serial recieve pin RF
 const int txRF =           26;         // Serial transmit pin RF
+const int psRFTX =         32;          // Power supply radio transmitter
+const int psRFRX =         33;          // Power supply radio reciever
+
 
 //////////////////////////////////////////////////////
 //                                                  //

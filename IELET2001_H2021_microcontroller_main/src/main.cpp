@@ -1,4 +1,6 @@
 
+
+
 // Include libraries
 #include <Arduino.h>                            // General Arduino C++ lib
 #include <TinyGPS++.h>                          // GPS lib for easy extraction of GPS data
@@ -10,10 +12,15 @@
 #include <SPI.h>                                // SPI lib. TFT lib depends on this
 #include <Wire.h>
 
+#define DEBUG
+
 // Include files with dependencies
 #include "PurpaceMadeLib/sensors_ext/sensors_ext.h"         // File containging classes related to peripheral sensors (GPS, temp, hum, press)
 #include "PurpaceMadeLib/ClusterCom/ClusterCom.h"           // ClusterCom library for peer to peer communicatision
 #include "config.h"                                         // Config file for HW pins, baud etc.
+
+
+
 
 // TFT class for OLED display control
 TFT_eSPI tft = TFT_eSPI(135, 240);
@@ -28,7 +35,7 @@ WeatherStation ws(i2cBME280Adr);
 Ubidots ubidots(UBIDOTS_TOKEN);
 
 // ClusterCom object
-ClusterCom CCom(rxRF, txRF, serialBaud);
+ClusterCom CCom(rxRF, txRF, psRFRX, psRFTX, serialBaud);
 
 
 /****************************************
@@ -94,6 +101,27 @@ void auxLoop()
 
 void commLoop()
 {
+/*
+  WeatherData weatherData; 
+
+  for (int unit = 0; unit < 100; unit++){
+    weatherData.lat = 0;
+    weatherData.lng = 0;
+    weatherData.alt = 0;
+
+  }
+
+  
+
+  // Format latitude and longitude in a string
+  char gpsData[1000] = "";
+  sprintf(gpsData, "\"lat\":%.6f, \"lng\":%.6f", weatherData.lat, weatherData.lng);
+
+*/  
+
+
+
+
   // Ubidots
   if (!ubidots.connected()){                    // Reconnect to ubidots 
     ubidots.reconnect();
@@ -209,6 +237,7 @@ void setup() {
   // Enable external sensors
   gps.enable();                                 // Power up GPS module and establish serial com 
   ws.enable();                                  // Establish I2C com with Weather Station
+  CCom.enable();                                // Power up radio transmission modules
   
 }
 
@@ -222,8 +251,6 @@ void loop(){
 
   delay(0);
 }
-
-
 
 
 

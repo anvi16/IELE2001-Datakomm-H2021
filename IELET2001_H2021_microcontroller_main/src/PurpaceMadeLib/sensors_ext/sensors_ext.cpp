@@ -18,7 +18,7 @@ GPS::GPS(int baudGPS, long baudSerial, int pinPS, int pinTx, int pinRx):
     ssGPS(pinRx, pinTx),                        // Instanciate SoftwareSerial object
     gps_unit()                                  // Instanciate gps object
     {       
-
+    
     // Read pins and baud from constructor to object
     GPSPsPin =  pinPS;
     GPSTxPin =  pinTx;
@@ -50,7 +50,7 @@ GPS::GPS(int baudGPS, long baudSerial, int pinPS, int pinTx, int pinRx):
     // Define the pin powering the GPS module as an output
     pinMode(GPSPsPin, OUTPUT);
 
-    Serial.begin(9600);
+    Serial.begin(baudSerial);
 
 };
 
@@ -60,9 +60,16 @@ void GPS::enable(){
 
     refreshStartTS = millis();                  // Set timestamp for function call
     
-    Serial.println("Enabling GPS module");
+    #ifdef DEBUG
+        Serial.println("Enabling GPS module");
+    #endif
+    
     digitalWrite(GPSPsPin, HIGH);               // Powering up GPS module
-    Serial.println("GPS module powered up");
+    
+    #ifdef DEBUG
+        Serial.println("GPS module powered up");
+    #endif
+    
     ssGPS.begin(GPSBaud);                       // Establish software serial for GPS with given baud rate
 
 
@@ -73,10 +80,14 @@ void GPS::enable(){
     
     // Feedback saying if serial communication is set up sucessfully or not
     if (ssGPS.available()){
-        Serial.println("Serial communication set up successfully");
+        #ifdef DEBUG
+            Serial.println("Serial communication set up successfully");
+        #endif
     }
     else{
-        Serial.println("Serial communication not set up sucessfully");
+        #ifdef DEBUG
+            Serial.println("Serial communication not set up sucessfully");
+        #endif
     }
     
 
@@ -130,12 +141,16 @@ void GPS::refresh(bool syncDateTime = HIGH){
         // Push temp values to stored values
         lat = _lat;                             
         lng = _lng;
-        alt = _alt;  
-        Serial.println("Update successful: Location");
+        alt = _alt; 
+        #ifdef DEBUG 
+            Serial.println("Update successful: Location");
+        #endif
     }
         
     else {
-        Serial.println("Update failed:     Location");
+        #ifdef DEBUG
+            Serial.println("Update failed:     Location");
+        #endif
     }
     
 
@@ -175,49 +190,67 @@ void GPS::refresh(bool syncDateTime = HIGH){
         min = _min;
         sec = _sec;
 
-        Serial.println("Update successful: Time and date");
+        #ifdef DEBUG
+            Serial.println("Update successful: Time and date");
+        #endif
 
         if(syncDateTime){
             
             setTime(hour, min, sec, dd, mm, yyyy);
             adjustTime(timezoneOffset * SECS_PER_HOUR);
-            
-            Serial.println("Time and date synchronized");
-            Serial.print("Current time: ");
-            Serial.print(hour);
-            Serial.print(":");
-            Serial.print(minute());
-            Serial.print(":");
-            Serial.print(second());
-            Serial.print(" ");
-            Serial.print(day());
-            Serial.print(" ");
-            Serial.print(month());
-            Serial.print(" ");
-            Serial.print(year()); 
-            Serial.println(); 
+            #ifdef DEBUG
+                Serial.println("Time and date synchronized");
+                Serial.print("Current time: ");
+                Serial.print(hour);
+                Serial.print(":");
+                Serial.print(minute());
+                Serial.print(":");
+                Serial.print(second());
+                Serial.print(" ");
+                Serial.print(day());
+                Serial.print(" ");
+                Serial.print(month());
+                Serial.print(" ");
+                Serial.print(year()); 
+                Serial.println(); 
+            #endif
 
         }
     }
 
     else{
-        Serial.println("Update failed:     Time and date");
+        #ifdef DEBUG
+            Serial.println("Update failed:     Time and date");
+        #endif
     }
 
 
     // Give overview of chars processed
-    Serial.print("Chars processed:   ");
-    Serial.println(gps_unit.charsProcessed());
+    
+    #ifdef DEBUG
+        Serial.print("Chars processed:   ");
+        Serial.println(gps_unit.charsProcessed());
+    #endif
 
 }
 
 void GPS::disable(){
     
-    Serial.println("Disabling GPS module");
+    #ifdef DEBUG
+        Serial.println("Disabling GPS module");
+    #endif
+    
     ssGPS.end();                                // Shut down serial com to GPS module
-    Serial.println("GPS serial communication ended");
+    
+    #ifdef DEBUG
+        Serial.println("GPS serial communication ended");
+    #endif
+    
     digitalWrite(GPSPsPin, LOW);                // Power down GPS sensor
-    Serial.println("GPS module powered down");
+    
+    #ifdef DEBUG    
+        Serial.println("GPS module powered down");
+    #endif
 };
 
 // Get functions - POSITION
@@ -266,11 +299,6 @@ unsigned long GPS::getTimeAge(){
     return timeAge;
 }
 
-void GPS::syncDateTime(){
-
-
-    
-}
 
 
 
@@ -290,7 +318,10 @@ WeatherStation::WeatherStation(int i2cAdr):
 
 void WeatherStation::enable(){
     
-    Serial.println("Enabling Weather station");                           
+    #ifdef DEBUG
+        Serial.println("Enabling Weather station"); 
+    #endif 
+
     bme280.begin(_i2cAdr);                      // Establish I2C communication with BME280
 
 
