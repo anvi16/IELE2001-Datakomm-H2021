@@ -17,6 +17,7 @@
 // Include files with dependencies
 #include "PurpaceMadeLib/sensors_ext/sensors_ext.h"         // File containging classes related to peripheral sensors (GPS, temp, hum, press)
 #include "PurpaceMadeLib/ClusterCom/ClusterCom.h"           // ClusterCom library for peer to peer communicatision
+#include "PurpaceMAdeLib/DisplayTTGO/DisplayTTGO.h"
 #include "config.h"                                         // Config file for HW pins, baud etc.
 
 
@@ -37,7 +38,8 @@ Ubidots ubidots(UBIDOTS_TOKEN);
 // ClusterCom object
 ClusterCom CCom(rxRF, txRF, psRFRX, psRFTX, serialBaud);
 
-
+// TTGO display
+DisplayTTGO display;
 /****************************************
  * Variabels Functions
  ****************************************/
@@ -243,9 +245,10 @@ void setup() {
 
 void loop(){
   
-  auxLoop();                                    // Loop all auxiliary utensils
+  // auxLoop();                                    // Loop all auxiliary utensils
   commLoop();                                   // Loop communication utensils
   serialPrints();                               // Run all desired prints
+  display.showLockScreen();
 
 
   
