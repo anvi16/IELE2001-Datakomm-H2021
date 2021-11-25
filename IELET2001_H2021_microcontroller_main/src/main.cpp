@@ -45,7 +45,7 @@ String callbackPayload = "";
 bool firstScan = HIGH;
 
 // ClusterCom
-uint8_t id;         // Device id
+uint8_t id = 0;     // Device id / Default = 0
 String msg;         // Buffer for incoming message
 uint8_t mt;         // Buffer for messageType
 
@@ -164,7 +164,6 @@ void commLoop()
     Serial.println(msg);
   }
 
-
 }
 
 
@@ -232,7 +231,7 @@ void setup() {
   ubiPubTS = millis();      
 
   // ClusterCom / setup crypt key and device id
-  CCom.begin(UBIDOTS_TOKEN, id);     
+  CCom.begin(UBIDOTS_TOKEN, 1);     
 
   // Enable external sensors
   gps.enable();                                 // Power up GPS module and establish serial com 
@@ -249,7 +248,7 @@ void loop(){
   serialPrints();                               // Run all desired prints
 
 
-  delay(0);
+  
 }
 
 

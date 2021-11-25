@@ -108,6 +108,8 @@ void GPS::refresh(bool syncDateTime = HIGH){
     _lng    = 0;
     _alt    = 0;
 
+    _gpsDataAvailable = LOW;
+
 
     refreshStartTS = millis();                  // Set timestamp for function call
     
@@ -119,13 +121,16 @@ void GPS::refresh(bool syncDateTime = HIGH){
     // Spend [refreshTime] milliseconds on reading and encoding data from GPS module
     do{
         while (ssGPS.available()){
+            if (ssGPS.peek() != 0){
+                _gpsDataAvailable = HIGH;
+            }
             gps_unit.encode(ssGPS.read());
         }
     } while (millis() - refreshStartTS < refreshTime);
 
 
     // Update - Location
-    if (gps_unit.location.isValid()){           
+    if ((_gpsDataAvailable) && (gps_unit.location.isValid())){           
         _lat = gps_unit.location.lat();          // Fetch latitude from satellite
         _lng = gps_unit.location.lng();          // Fetch longitude from satellite
         _alt = gps_unit.altitude.meters();       // Fetch altitude from satellite
@@ -152,6 +157,8 @@ void GPS::refresh(bool syncDateTime = HIGH){
             Serial.println("Update failed:     Location");
         #endif
     }
+
+    
     
 
 
@@ -160,16 +167,17 @@ void GPS::refresh(bool syncDateTime = HIGH){
     --------------------------------------------------------------------*/
 
     // Update - Date
-    if (gps_unit.date.isValid()){
+    if ((_gpsDataAvailable)&&(gps_unit.date.isValid())){
 
         // Save fetched values in temporary variables
         _yyyy =  gps_unit.date.year();           // Fetch year from satellite
         _mm =    gps_unit.date.month();          // Fetch month from satellite
-        _dd =    gps_unit.date.day();            // Fetch day of month from satellite
+        _dd =    gps_unit.date.day();            // Fetch day of month from satellite    
     }
 
+    
     // Update - Time
-    if (gps_unit.time.isValid()){
+    if ((_gpsDataAvailable)&&(gps_unit.time.isValid())){
         
         // Save fetched values in temporary variables
         _hour   =   gps_unit.time.hour();       // Fetch hour from satellite

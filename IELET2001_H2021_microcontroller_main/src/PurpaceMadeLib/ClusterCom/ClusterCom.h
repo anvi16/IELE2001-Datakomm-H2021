@@ -37,7 +37,7 @@ class ClusterCom {
 	    DATA  = 5
     };
 
-	ClusterCom(uint8_t pinRx = 27, uint8_t pinTx = 26, uint8_t pwrRx = 14, uint8_t pwrTx = 13, uint32_t serialBaud = 9600, uint8_t id = 0);
+	ClusterCom(uint8_t pinRx = 27, uint8_t pinTx = 26, uint8_t pwrRx = 25, uint8_t pwrTx = 33, uint32_t serialBaud = 9600, uint8_t id = 0);
 
 	void begin(const char* encryptkey = nullptr, uint8_t id = 0);
 	bool send(uint8_t receiver, const char* msg = nullptr, MT mt = DATA);

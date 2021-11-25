@@ -40,6 +40,8 @@ class GPS{
         float alt;                          // Altitude
         float _alt;                         // Altitude - Temp val
 
+        bool _gpsDataAvailable;
+
         unsigned long locUpdateTS;          // Timestamp for last location update
 
         // Date
@@ -64,6 +66,8 @@ class GPS{
         unsigned long timeUpdateTS;         // Timestamp for last time update
   
         const int timezoneOffset = 0;       // Central European Time
+
+
     public:
 
         // Constructor 
