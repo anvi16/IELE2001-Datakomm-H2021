@@ -23,11 +23,13 @@ const int rxGPS =           13;         // Serial recieve pin GPS
 const int txGPS =           12;         // Serial transmit pin GPS
 
 // RF module
-const int rxRF =           27;         // Serial recieve pin RF
-const int txRF =           26;         // Serial transmit pin RF
-const int psRFTX =         32;         // Power supply radio transmitter
-const int psRFRX =         33;         // Power supply radio reciever
+const int rxRF =            27;         // Serial recieve pin RF
+const int txRF =            26;         // Serial transmit pin RF
+const int psRFTX =          32;         // Power supply radio transmitter
+const int psRFRX =          33;         // Power supply radio reciever
 
+const int btnS1 =           0;
+const int btnS2 =           35;
 
 //////////////////////////////////////////////////////
 //                                                  //
