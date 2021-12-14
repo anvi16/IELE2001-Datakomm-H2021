@@ -89,15 +89,32 @@ void espDelay(int ms)
 
 void auxLoop()
 {
-  gps.refresh(HIGH);                                // Update data from GPS
+  //gps.refresh(HIGH);                                // Update data from GPS
 
-  tft.init();
-  tft.setRotation(1);
-  tft.fillScreen(TFT_WHITE);
-  tft.setTextSize(2);
-  tft.setCursor(10, 10);
-  tft.setTextColor(TFT_GREEN);
-  tft.print("Test");
+  bool S1 = digitalRead(btnS1);
+ 
+  display.showLockScreen();
+  Serial.println("Lockscreen called");
+
+  if (S1){
+
+    Serial.println("");
+    Serial.println("Left");
+    Serial.println("");
+
+  };
+
+ /* if (digitalRead(btnS2)){
+    Serial.println("");
+    Serial.println("");
+    Serial.println("Right");
+    Serial.println("");
+    Serial.println("");
+  };
+  */
+
+  delay(100);
+
 }
 
 
@@ -221,8 +238,16 @@ void serialPrints()
 void setup() {
   
   // Start serial communication with microcontroller
-  Serial.begin(serialBaud);                     
+  Serial.begin(serialBaud);  
+
+  espDelay(2000);
+
   Serial.println("Booting up");   
+
+  pinMode(btnS1, INPUT_PULLUP);
+  //pinMode(btnS2, INPUT_PULLUP);
+
+
 
   // Ubidots 
   // ubidots.setDebug(true);  // uncomment this to make debug messages available
@@ -245,10 +270,12 @@ void setup() {
 
 void loop(){
   
-  // auxLoop();                                    // Loop all auxiliary utensils
+
+  
+  auxLoop();                                    // Loop all auxiliary utensils
   commLoop();                                   // Loop communication utensils
-  serialPrints();                               // Run all desired prints
-  display.showLockScreen();
+  //serialPrints();                               // Run all desired prints
+  
 
 
   
