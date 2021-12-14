@@ -28,8 +28,16 @@ const int txRF =            26;         // Serial transmit pin RF
 const int psRFTX =          32;         // Power supply radio transmitter
 const int psRFRX =          33;         // Power supply radio reciever
 
+
+// Buttons
 const int btnS1 =           0;
 const int btnS2 =           35;
+
+// Display
+const int backLight =        4;
+
+
+
 
 //////////////////////////////////////////////////////
 //                                                  //
