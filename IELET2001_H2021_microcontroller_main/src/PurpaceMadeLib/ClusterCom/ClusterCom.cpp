@@ -40,7 +40,7 @@ void ClusterCom::begin(const char* encryptkey, uint8_t id)
 
         // Copy n elements of user choosen encryptkey to internall storage
         for (int i=0; i < n; i++){
-            _encryptkey[i] = encryptkey[i];
+            _encryptkey[i] = encryptkey[i+5];
         }
         aes128.setKey(_encryptkey, sizeof(_encryptkey));
     }
@@ -49,10 +49,10 @@ void ClusterCom::begin(const char* encryptkey, uint8_t id)
         aes128.setKey(_encryptkey, sizeof(_encryptkey));
 }
 
-bool ClusterCom::send(const char* msg, uint8_t receiver, MT mt, uint8_t id)
+bool ClusterCom::send(uint8_t receiver, const char* msg, MT mt)
 {
+
     StaticJsonDocument<MAX_PACKET_SIZE> Json_Buffer;
-    Json_Buffer["id"]   = id;
     Json_Buffer["mt"]   = mt;
 	Json_Buffer["msg"]  = msg;
 
@@ -117,55 +117,6 @@ bool ClusterCom::available(uint8_t &mt, String &msg)
         }
     }
     return false;
-}
-
-
-bool ClusterCom::reciveId(const char* randStr)
-{
-    uint8_t from;
-    uint8_t len = sizeof(_buf);
-
-    StaticJsonDocument<MAX_PACKET_SIZE> Json_Buffer;
-	
-    if (manager.available())
-    {
-        // Wait for a message addressed to client
-        if (manager.recvfromAck(_buf, &len, &from))
-        {
-            deserializeJson(Json_Buffer, _buf, sizeof(_buf));
-
-            if(randStr == Json_Buffer["msg"] && ID == Json_Buffer["mt"])
-                {
-                    masterId = from;
-                    _id = Json_Buffer["id"];
-                    manager.setThisAddress(_id);
-                }
-        }
-    }
-}
-
-
-bool ClusterCom::setId()
-{
-    uint8_t retry = 1;
-    uint8_t i = 0;
-    const char* randStr;
-    while(send(randStr, masterId, ID) && reciveId(randStr))
-    {
-        i++;
-        if(i == retry)
-        {
-            masterId++;
-            i=0;
-        }
-        if(masterId > 10)
-        {
-            masterId = 1;
-            //delay(18000); // Delay retry 5min
-            return false;
-        }
-    }
-    return true;
 }
 
 

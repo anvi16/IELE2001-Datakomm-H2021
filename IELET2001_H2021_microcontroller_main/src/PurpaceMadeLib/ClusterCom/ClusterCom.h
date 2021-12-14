@@ -13,7 +13,6 @@
 
 #include <Arduino.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <RH_ASK.h>
 #include <RHEncryptedDriver.h>
 #include <RHReliableDatagram.h>
@@ -32,7 +31,7 @@ class ClusterCom {
     enum MT : uint8_t
     {
 	    PING  = 1,
-	    ID    = 2,
+	    TIME  = 2,
 	    SLEEP = 3,
 	    ERROR = 4,
 	    DATA  = 5
@@ -41,18 +40,14 @@ class ClusterCom {
 	ClusterCom(uint8_t pinRx = 27, uint8_t pinTx = 26, uint8_t pwrRx = 25, uint8_t pwrTx = 33, uint32_t serialBaud = 9600, uint8_t id = 0);
 
 	void begin(const char* encryptkey = nullptr, uint8_t id = 0);
-	bool send(const char* msg, uint8_t receiver = 1, MT mt = DATA, uint8_t id = 0);
+	bool send(uint8_t receiver, const char* msg = nullptr, MT mt = DATA);
 	bool available(uint8_t &mt, String &msg);
-	bool setId();
 	void enable();
 	void disable();
-
-	uint8_t masterId = 0; // If connected to master
 
   private:
 	String message();
 	uint8_t messageType();
-	bool reciveId(const char* randStr);
 
 	// Instantiate ASK communication 
 	RH_ASK rfCom;
