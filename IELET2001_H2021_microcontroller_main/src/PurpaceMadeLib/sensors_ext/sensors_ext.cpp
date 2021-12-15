@@ -418,11 +418,15 @@ void UnitData::enable(){
 void UnitData::refresh(){
 
     // Battery
-    batteryVoltage = analogRead(batteryReadPin);
-    batteryPercent = map(batteryVoltage, 1750, 2550, 0, 100);
+    batteryPercent = map(analogRead(batteryReadPin), 1750, 2550, 0, 100);
+    batteryVoltage = map(analogRead(batteryReadPin), 1750, 2550, 0, 3.3);
 
 }
 
 int UnitData::getBatteryPercent(){
     return(batteryPercent);
+}
+
+float UnitData::getBatteryVoltage(){
+    return(batteryVoltage);
 }

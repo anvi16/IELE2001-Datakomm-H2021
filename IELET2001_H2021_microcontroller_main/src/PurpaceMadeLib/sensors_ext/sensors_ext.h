@@ -188,9 +188,10 @@ class UnitData{
 
     public:
         UnitData(int pinBattery); // Constructor
-        void enable();
-        void refresh();
-        int getBatteryPercent();
+        void    enable();
+        void    refresh();
+        int     getBatteryPercent();
+        float   getBatteryVoltage();
 
 };
 

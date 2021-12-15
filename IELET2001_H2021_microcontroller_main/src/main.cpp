@@ -130,27 +130,28 @@ void espDelay(int ms)
 
 void auxLoop()
 {
-  gps.refresh(HIGH);                                // Update data from GPS
-  unit.refresh();
-
-  display.selectLockScreen();
-  display.refresh(unit.getBatteryPercent());
-
-  if (digitalRead(btnS1)){
-    Serial.println("");
-    Serial.println("Left");
-    Serial.println("");
-  };
-
-  ///////////////////////////S2.isPressed()
+  gps.refresh(true);                            // Update data from GPS and syncronize time and date
+  unit.refresh();                               // Update data from unit (battery state)
+  ws.refresh();
   
-  if (digitalRead(btnS2)){
-    Serial.println("");
-    Serial.println("Right");
-    Serial.println("");
-  };
+  // Move relevant data to display object and draw lock screen
+  display.setBatteryState(  unit.getBatteryPercent(), 
+                            unit.getBatteryVoltage());
+  display.setLockScreenData(ws.getTempC(), 
+                            ws.getHum(), 
+                            ws.getPressHPa(), 
+                            gps.getLatitude(),
+                            gps.getLongitude(),
+                            gps.getAltitude());
+  display.selectLockScreen();
+  display.refresh();
 
-  espDelay(100);
+  espDelay(3000);
+
+  //display.selectBlackScreen();
+  //display.refresh();
+
+  //espDelay(3000);
 
 }
 
@@ -257,41 +258,6 @@ void commLoop()
 
 void serialPrints()
 {
-    // Print position
-  Serial.print("Current position:  ");
-  Serial.print(gps.getLatitude(),6);
-  Serial.print("N, ");
-  Serial.print(gps.getLongitude(),6);
-  Serial.println("E");
-  
-  // Print date
-  Serial.print("Current date:      ");
-  Serial.print(gps.getDay());
-  Serial.print("/");
-  Serial.print(gps.getMonth());
-  Serial.print("-");
-  Serial.println(gps.getYear());
-
-  // Print time
-  Serial.print("Current time:      ");
-  Serial.print(gps.getHour());
-  Serial.print(":");
-  Serial.print(gps.getMinute());
-  Serial.print(":");
-  Serial.println(gps.getSecond());
-  Serial.print("Time age:");
-  Serial.println(gps.getTimeAge());
-
-  Serial.println();
-
-  // Print weather
-  Serial.print("Current temp:      ");
-  Serial.println(ws.getTempC());
-  Serial.print("Current press:     ");
-  Serial.println(ws.getPressHPa());
-  Serial.print("Current hum:       ");
-  Serial.println(ws.getHum());
-
   Serial.println();
   Serial.print("MQTT payload size: ");
   Serial.println(sizeof(callbackPayload));
@@ -300,21 +266,32 @@ void serialPrints()
 
 /****************************************
  * Main Functions
- ****************************************/
-// Setup
+****************************************/
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////
+//                                                  //
+//                       SETUP                      //
+//                                                  //
+//////////////////////////////////////////////////////
 void setup() {
   
   // Start serial communication with microcontroller
   Serial.begin(serialBaud);  
-
   espDelay(1000);
+
   display.selectMessageScreen();
   display.setString(0, "Startup");
-  display.setString(2, "Unit is booting up");
+  display.setString(2, "Unit is booting up.");
   display.setString(3, "Please wait...");
   display.setString(5, "Enabling peripheral");
   display.setString(6, "units...");
-  display.refresh(100);  
+  display.refresh();  
 
   // Button object begin to enable monitoring of 
   S2.begin();
@@ -334,7 +311,7 @@ void setup() {
   display.setString(3, "configuration:");
   display.setString(5, "Press right button..");
   unsigned long selTS = millis();
-  int selTime = 15000;
+  int selTime = 5000;
   do{
     S2.read(); // Read
     if (S2.isPressed()){
@@ -342,7 +319,7 @@ void setup() {
     }
     // Display remaining time before configured as slave
     display.setString(6, String(selTime/1000 - ((millis() - selTS) / 1000)));
-    display.refresh(unit.getBatteryPercent());
+    display.refresh();
   } while ((millis() < selTS + selTime) && (!S2.isPressed()));
 
   display.setString(0, "Startup");
@@ -361,11 +338,12 @@ void setup() {
 
   if (master){
     display.setString(3, "as \"Master\"!");
+    display.setMaster();                          // Display master symbol besides clock
 
     // UBIDOTS
     display.setString(5, "Connecting to");
     display.setString(6, "Ubidots...");
-    display.refresh(unit.getBatteryPercent());                        
+    display.refresh();                        
     // ubidots.setDebug(true);  // uncomment this to make debug messages available
     ubidots.connectToWifi(WIFI_SSID, WIFI_PASS);
     ubidots.setCallback(UbisoftCallback);
@@ -374,20 +352,20 @@ void setup() {
     ubiPubTS = millis(); 
     display.setString(5, "Connected!");
     display.setString(6, "");
-    display.refresh(unit.getBatteryPercent());   
+    display.refresh();   
     espDelay(1000);
 
     // CLUSTERCOM
     // Setup crypt key and eeprom storage
     display.setString(5, "Configuring ");
     display.setString(6, "ClusterCom...");
-    display.refresh(unit.getBatteryPercent());
+    display.refresh();
     CCom.begin(UBIDOTS_TOKEN, EEPROM_SIZE, ID_EEPROME_ADDRESS);
     CCom.setId(1, true);                        // Set device to master id
 
     display.setString(5, "Configured!");
     display.setString(6, "");
-    display.refresh(unit.getBatteryPercent());
+    display.refresh();
     espDelay(1000);
   }
 
@@ -406,7 +384,7 @@ void setup() {
     // Setup crypt key and eeprom storage
     display.setString(5, "Configuring ");
     display.setString(6, "ClusterCom...");
-    display.refresh(unit.getBatteryPercent());
+    display.refresh();
     CCom.begin(UBIDOTS_TOKEN, EEPROM_SIZE, ID_EEPROME_ADDRESS);
 
     bool err = !CCom.getId();
@@ -414,7 +392,7 @@ void setup() {
       Serial.println("Failed to obtain id");
       display.setString(5, "Failed to");
       display.setString(6, "obtain ID");
-      display.refresh(unit.getBatteryPercent());
+      display.refresh();
       espDelay(1000);
     }
 
@@ -422,7 +400,7 @@ void setup() {
       Serial.println("ID obtained");
       display.setString(5, "ID obtained");
       display.setString(6, "");
-      display.refresh(unit.getBatteryPercent());
+      display.refresh();
       espDelay(1000);
     }
   }
@@ -458,7 +436,7 @@ void setup() {
 void loop(){
  
   auxLoop();                                    // Loop all auxiliary utensils
-  commLoop();                                   // Loop communication utensils
+  //commLoop();                                   // Loop communication utensils
   //serialPrints();                               // Run all desired prints
   
 }
