@@ -9,7 +9,7 @@
 #include <SPI.h>                                // SPI lib. TFT lib depends on this
 #include <Wire.h>
 #include <EEPROM.h>
-
+#include <JC_Button.h>
 
 // Include files with dependencies
 #include "PurpaceMadeLib/sensors_ext/sensors_ext.h"         // File containging classes related to peripheral sensors (GPS, temp, hum, press)
@@ -53,6 +53,9 @@ DisplayTTGO display(backLight);
 
 // Unit data 
 UnitData unit(batteryPin);
+
+// Button S2
+Button S2(btnS2, true);
 
 
 
@@ -133,21 +136,21 @@ void auxLoop()
   display.selectLockScreen();
   display.refresh(unit.getBatteryPercent());
 
-  // display.showLockScreen(unit.getBatteryPercent());
-
   if (digitalRead(btnS1)){
     Serial.println("");
     Serial.println("Left");
     Serial.println("");
   };
 
+  ///////////////////////////S2.isPressed()
+  
   if (digitalRead(btnS2)){
     Serial.println("");
     Serial.println("Right");
     Serial.println("");
   };
 
-  // espDelay(100);
+  espDelay(100);
 
 }
 
@@ -304,38 +307,129 @@ void setup() {
   // Start serial communication with microcontroller
   Serial.begin(serialBaud);  
 
-  espDelay(2000); 
+  espDelay(1000);
+  display.selectMessageScreen();
+  display.setString(0, "Startup");
+  display.setString(2, "Unit is booting up");
+  display.setString(3, "Please wait...");
+  display.setString(5, "Enabling peripheral");
+  display.setString(6, "units...");
+  display.refresh(100);  
 
-  Serial.println("Booting up");   
-
-  pinMode(btnS1, INPUT);
-  pinMode(btnS2, INPUT);
-
-  // Ubidots 
-  // ubidots.setDebug(true);  // uncomment this to make debug messages available
-  ubidots.connectToWifi(WIFI_SSID, WIFI_PASS);
-  ubidots.setCallback(UbisoftCallback);
-  ubidots.setup();
-  ubidots.reconnect();
-  ubiPubTS = millis();      
-
-  // ClusterCom / setup crypt key and eeprom storage
-  CCom.begin(UBIDOTS_TOKEN, EEPROM_SIZE, ID_EEPROME_ADDRESS);
-
-  if(!master) 
-  {
-    bool err = !CCom.getId();
-    if (err) Serial.println("Failed to get id");
-  }
-  else CCom.setId(1, true);  // Set device to master id   
+  // Button object begin to enable monitoring of 
+  S2.begin();
 
   // Enable external sensors
   gps.enable();                                 // Power up GPS module and establish serial com 
   ws.enable();                                  // Establish I2C com with Weather Station
   CCom.enable();                                // Power up radio transmission modules
   unit.enable();                                // Set pinmode for battery surveilance
+  espDelay(1000); 
+  unit.refresh();
+  
 
-  // Sleep 
+  // MASTER / SLAVE
+  display.setString(0, "Startup");
+  display.setString(2, "For \"Master\"");
+  display.setString(3, "configuration:");
+  display.setString(5, "Press right button..");
+  unsigned long selTS = millis();
+  int selTime = 15000;
+  do{
+    S2.read(); // Read
+    if (S2.isPressed()){
+      master = true;
+    }
+    // Display remaining time before configured as slave
+    display.setString(6, String(selTime/1000 - ((millis() - selTS) / 1000)));
+    display.refresh(unit.getBatteryPercent());
+  } while ((millis() < selTS + selTime) && (!S2.isPressed()));
+
+  display.setString(0, "Startup");
+  display.setString(2, "Unit configured");
+  display.setString(5, "");
+  display.setString(6, "");
+
+
+
+
+  //////////////////////////////////////////////////////
+  //                                                  //
+  //                       MASTER                     //
+  //                                                  //
+  //////////////////////////////////////////////////////
+
+  if (master){
+    display.setString(3, "as \"Master\"!");
+
+    // UBIDOTS
+    display.setString(5, "Connecting to");
+    display.setString(6, "Ubidots...");
+    display.refresh(unit.getBatteryPercent());                        
+    // ubidots.setDebug(true);  // uncomment this to make debug messages available
+    ubidots.connectToWifi(WIFI_SSID, WIFI_PASS);
+    ubidots.setCallback(UbisoftCallback);
+    ubidots.setup();
+    ubidots.reconnect();
+    ubiPubTS = millis(); 
+    display.setString(5, "Connected!");
+    display.setString(6, "");
+    display.refresh(unit.getBatteryPercent());   
+    espDelay(1000);
+
+    // CLUSTERCOM
+    // Setup crypt key and eeprom storage
+    display.setString(5, "Configuring ");
+    display.setString(6, "ClusterCom...");
+    display.refresh(unit.getBatteryPercent());
+    CCom.begin(UBIDOTS_TOKEN, EEPROM_SIZE, ID_EEPROME_ADDRESS);
+    CCom.setId(1, true);                        // Set device to master id
+
+    display.setString(5, "Configured!");
+    display.setString(6, "");
+    display.refresh(unit.getBatteryPercent());
+    espDelay(1000);
+  }
+
+
+
+  //////////////////////////////////////////////////////
+  //                                                  //
+  //                       SLAVE                      //
+  //                                                  //
+  //////////////////////////////////////////////////////
+
+  else{
+    display.setString(3, "as \"Slave\"");
+
+    // CLUSTERCOM
+    // Setup crypt key and eeprom storage
+    display.setString(5, "Configuring ");
+    display.setString(6, "ClusterCom...");
+    display.refresh(unit.getBatteryPercent());
+    CCom.begin(UBIDOTS_TOKEN, EEPROM_SIZE, ID_EEPROME_ADDRESS);
+
+    bool err = !CCom.getId();
+    if (err){
+      Serial.println("Failed to obtain id");
+      display.setString(5, "Failed to");
+      display.setString(6, "obtain ID");
+      display.refresh(unit.getBatteryPercent());
+      espDelay(1000);
+    }
+
+    else{
+      Serial.println("ID obtained");
+      display.setString(5, "ID obtained");
+      display.setString(6, "");
+      display.refresh(unit.getBatteryPercent());
+      espDelay(1000);
+    }
+  }
+
+
+
+  // Sleep configuration
   hw_timer = timerBegin(0, 80, true);
   timerAttachInterrupt(hw_timer, &onTimer, true);
   timerAlarmWrite(hw_timer, 1000000, true);
@@ -361,12 +455,10 @@ void setup() {
 
 }
 
-
 void loop(){
  
   auxLoop();                                    // Loop all auxiliary utensils
   commLoop();                                   // Loop communication utensils
   //serialPrints();                               // Run all desired prints
   
-
 }
