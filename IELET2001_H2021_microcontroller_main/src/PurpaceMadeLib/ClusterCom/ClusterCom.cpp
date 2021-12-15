@@ -19,19 +19,22 @@ ClusterCom::ClusterCom(uint8_t pinRx, uint8_t pinTx, uint8_t pwrRx, uint8_t pwrT
     _pinTx = pinTx;
     _pwrRx = pwrRx;
     _pwrTx = pwrTx;
+	
 }
 
 // Encryption string must be 16 + 5 prefix char long
-void ClusterCom::begin(const char* encryptkey, uint8_t id)
+void ClusterCom::begin(const char* encryptkey, uint16_t eepromSize, uint16_t idEepromAddress, uint16_t masterIdEepromAddress)
 {
+    _idEepromAddress = idEepromAddress;
+    _masterIdEepromAddress = idEepromAddress;
+
     Serial.begin(_serialBaud);
     pinMode(_pwrTx,OUTPUT);     // Set pinmode for control of power supply transmitter
     pinMode(_pwrRx,OUTPUT);     // Set pinmode for control of power supply reciever
 
-    // Set device id after constructor
-    _id = id;
-    manager.setThisAddress(id);
     manager.init();
+
+    EEPROM.begin(eepromSize);
 
     // Now set up the encryption key in cipher
     if (encryptkey != nullptr) 
@@ -120,9 +123,10 @@ bool ClusterCom::available(uint8_t &mt, String &msg)
 }
 
 
-bool ClusterCom::reciveId(const char* randStr)
+bool ClusterCom::reciveId(const char* mac)
 {
     uint8_t from;
+    uint16_t wait = 2000; // 2sek
     uint8_t len = sizeof(_buf);
 
     StaticJsonDocument<MAX_PACKET_SIZE> Json_Buffer;
@@ -130,42 +134,64 @@ bool ClusterCom::reciveId(const char* randStr)
     if (manager.available())
     {
         // Wait for a message addressed to client
-        if (manager.recvfromAck(_buf, &len, &from))
+        if (manager.recvfromAckTimeout(_buf, &len, wait, &from))
         {
             deserializeJson(Json_Buffer, _buf, sizeof(_buf));
+            uint8_t id = Json_Buffer["id"];
+            uint8_t mt = Json_Buffer["mt"];
+            const char* msg = Json_Buffer["msg"];
 
-            if(randStr == Json_Buffer["msg"] && ID == Json_Buffer["mt"])
-                {
-                    masterId = from;
-                    _id = Json_Buffer["id"];
-                    manager.setThisAddress(_id);
-                }
+            if(strcmp(msg, mac) == 0 && mt == ID)
+            {
+                masterId = from;
+                setId(id, true);
+                Serial.print("ID resived: ");
+                Serial.println(id);
+                return true;
+            }
         }
     }
+    return false;
 }
 
 
-bool ClusterCom::setId()
+
+
+bool ClusterCom::getId()
 {
-    uint8_t retry = 1;
-    uint8_t i = 0;
-    const char* randStr;
-    while(send(randStr, masterId, ID) && reciveId(randStr))
+    
+    /* if (EEPROM.read(_idEepromAddress))
     {
-        i++;
-        if(i == retry)
-        {
-            masterId++;
-            i=0;
-        }
-        if(masterId > 10)
-        {
-            masterId = 1;
-            //delay(18000); // Delay retry 5min
-            return false;
-        }
+        setId(EEPROM.read(_idEepromAddress));
+        return true;
+    } */
+    
+    //Serial.println(EEPROM.read(_idEepromAddress));
+
+    int8_t retry = 2;
+    const char* mac = WiFi.macAddress().c_str();
+
+    while(!send(mac, masterId, ID) && !reciveId(mac))
+    {
+        Serial.print("LOOP: ");
+        Serial.println(mac);
+        if(--retry <= 0) return false;
     }
     return true;
+}
+
+
+void ClusterCom::setId(uint8_t id, bool storeInEeprom)
+{
+    _id = id;
+    manager.setThisAddress(id);
+
+    // Store id in flash memory
+    if (storeInEeprom)
+    {
+        EEPROM.write(id, _idEepromAddress);
+        //EEPROM.commit();
+    }
 }
 
 

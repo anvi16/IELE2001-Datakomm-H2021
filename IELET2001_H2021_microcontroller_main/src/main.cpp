@@ -1,6 +1,3 @@
-
-
-
 // Include libraries
 #include <Arduino.h>                            // General Arduino C++ lib
 #include <TinyGPS++.h>                          // GPS lib for easy extraction of GPS data
@@ -11,8 +8,8 @@
 #include <TFT_eSPI.h>                           // TFT lib for control of OLED screen
 #include <SPI.h>                                // SPI lib. TFT lib depends on this
 #include <Wire.h>
+#include <EEPROM.h>
 
-#define DEBUG
 
 // Include files with dependencies
 #include "PurpaceMadeLib/sensors_ext/sensors_ext.h"         // File containging classes related to peripheral sensors (GPS, temp, hum, press)
@@ -20,8 +17,21 @@
 #include "PurpaceMAdeLib/DisplayTTGO/DisplayTTGO.h"
 #include "config.h"                                         // Config file for HW pins, baud etc.
 
+#define DEBUG
 
 
+volatile long buttonTimer = 0;                   // Variabel som lagrer tiden siden sist knappetrykk
+int sleepTimer = TIME_TO_SLEEP * mS_TO_S_FACTOR; // Tid i millisekunder til ESPen går i deep sleep modus
+
+hw_timer_t *hw_timer = NULL;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+
+
+
+
+/**************************************** 
+* Instanciate objects
+****************************************/
 
 // TFT class for OLED display control
 TFT_eSPI tft = TFT_eSPI(135, 240);
@@ -39,23 +49,51 @@ Ubidots ubidots(UBIDOTS_TOKEN);
 ClusterCom CCom(rxRF, txRF, psRFRX, psRFTX, serialBaud);
 
 // TTGO display
-DisplayTTGO display;
+DisplayTTGO display(backLight);
+
+// Unit data 
+UnitData unit(batteryPin);
+
+
+
+
 /****************************************
- * Variabels Functions
- ****************************************/
+* Variables Functions
+****************************************/
+
 String callbackPayload = "";
 bool firstScan = HIGH;
 
 // ClusterCom
-uint8_t id = 0;     // Device id / Default = 0
-String msg;         // Buffer for incoming message
-uint8_t mt;         // Buffer for messageType
-
+uint8_t id = 255;      // Device id / Default = 255
+uint8_t numbOfSlaves = 0;
+String msg;          // Buffer for incoming message
+uint8_t mt;          // Buffer for messageType
+bool master = false; // True if device is master
 
 
 /****************************************
- * Auxiliar Functions
- ****************************************/
+* Sleep Mode Functions
+****************************************/
+
+void IRAM_ATTR onTimer()
+{
+  portENTER_CRITICAL_ISR(&timerMux);
+  if (millis() - buttonTimer > sleepTimer)
+  {
+    esp_deep_sleep_start();
+  }
+  portEXIT_CRITICAL_ISR(&timerMux);
+}
+
+void ISRbuttonTimer()
+{
+  buttonTimer = millis();
+}
+
+/****************************************
+* Auxiliary Functions
+****************************************/
 
 void UbisoftCallback(char *topic, byte *payload, unsigned int length)
 {
@@ -89,31 +127,27 @@ void espDelay(int ms)
 
 void auxLoop()
 {
-  //gps.refresh(HIGH);                                // Update data from GPS
+  gps.refresh(HIGH);                                // Update data from GPS
+  unit.refresh();
 
-  bool S1 = digitalRead(btnS1);
- 
-  display.showLockScreen();
-  Serial.println("Lockscreen called");
+  display.selectLockScreen();
+  display.refresh(unit.getBatteryPercent());
 
-  if (S1){
+  // display.showLockScreen(unit.getBatteryPercent());
 
+  if (digitalRead(btnS1)){
     Serial.println("");
     Serial.println("Left");
     Serial.println("");
-
   };
 
- /* if (digitalRead(btnS2)){
-    Serial.println("");
+  if (digitalRead(btnS2)){
     Serial.println("");
     Serial.println("Right");
     Serial.println("");
-    Serial.println("");
   };
-  */
 
-  delay(100);
+  // espDelay(100);
 
 }
 
@@ -181,6 +215,38 @@ void commLoop()
   {
     Serial.println(mt);
     Serial.println(msg);
+
+    
+    switch (mt)
+    {
+      case CCom.PING:
+        /* code */
+        break;
+      case CCom.ID:
+        if(master)
+        {
+          if(numbOfSlaves < 100)
+          {
+            CCom.send(msg.c_str(), 255, CCom.ID, numbOfSlaves +2); // Address between 2-101 
+            EEPROM.write(numbOfSlaves++, NUMB_OF_SLAVES_ADDRESS);
+            //EEPROM.commit();
+          }
+
+        }
+        break;
+      case CCom.SLEEP:
+        /* code */
+        break;
+      case CCom.ERROR:
+        /* code */
+        break;
+      case CCom.DATA:
+        /* code */
+        break;
+      default:
+          // Unknown massege type
+        break;
+    }
   }
 
 }
@@ -229,8 +295,6 @@ void serialPrints()
   Serial.println();
 }
 
-
-
 /****************************************
  * Main Functions
  ****************************************/
@@ -240,14 +304,12 @@ void setup() {
   // Start serial communication with microcontroller
   Serial.begin(serialBaud);  
 
-  espDelay(2000);
+  espDelay(2000); 
 
   Serial.println("Booting up");   
 
-  pinMode(btnS1, INPUT_PULLUP);
-  //pinMode(btnS2, INPUT_PULLUP);
-
-
+  pinMode(btnS1, INPUT);
+  pinMode(btnS2, INPUT);
 
   // Ubidots 
   // ubidots.setDebug(true);  // uncomment this to make debug messages available
@@ -257,33 +319,54 @@ void setup() {
   ubidots.reconnect();
   ubiPubTS = millis();      
 
-  // ClusterCom / setup crypt key and device id
-  CCom.begin(UBIDOTS_TOKEN, 1);     
+  // ClusterCom / setup crypt key and eeprom storage
+  CCom.begin(UBIDOTS_TOKEN, EEPROM_SIZE, ID_EEPROME_ADDRESS);
+
+  if(!master) 
+  {
+    bool err = !CCom.getId();
+    if (err) Serial.println("Failed to get id");
+  }
+  else CCom.setId(1, true);  // Set device to master id   
 
   // Enable external sensors
   gps.enable();                                 // Power up GPS module and establish serial com 
   ws.enable();                                  // Establish I2C com with Weather Station
   CCom.enable();                                // Power up radio transmission modules
-  
+  unit.enable();                                // Set pinmode for battery surveilance
+
+  // Sleep 
+  hw_timer = timerBegin(0, 80, true);
+  timerAttachInterrupt(hw_timer, &onTimer, true);
+  timerAlarmWrite(hw_timer, 1000000, true);
+  timerAlarmEnable(hw_timer);
+  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+
+  attachInterrupt(btnS1, ISRbuttonTimer, RISING);
+  attachInterrupt(btnS2, ISRbuttonTimer, RISING);
+
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_35, 0);
+
+  esp_sleep_wakeup_cause_t wakeup_reason;
+  wakeup_reason = esp_sleep_get_wakeup_cause();
+  switch (wakeup_reason)
+  {
+  case ESP_SLEEP_WAKEUP_EXT0:
+    Serial.println("Wakeup:Button");
+    break;
+  case ESP_SLEEP_WAKEUP_TIMER:
+    Serial.println("Wakeup:Timer");
+    break;
+  }
+
 }
 
 
 void loop(){
-  
-
-  
+ 
   auxLoop();                                    // Loop all auxiliary utensils
   commLoop();                                   // Loop communication utensils
   //serialPrints();                               // Run all desired prints
   
 
-
-  
 }
-
-
-
-
-
-
-

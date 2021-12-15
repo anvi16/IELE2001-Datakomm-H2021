@@ -20,8 +20,13 @@
 #include <ArduinoJson.h>
 #include <AES.h>
 #include <SPI.h>
+#include <WiFi.h>
+#include <EEPROM.h>
 
 #define MAX_PACKET_SIZE 47
+#define ID_EEPROME_ADDRESS 100
+#define MASTER_ID_EEPROME_ADDRESS 101
+#define EEPROM_SIZE 200
 #define DEBUG
 
 class ClusterCom {
@@ -38,12 +43,13 @@ class ClusterCom {
 	    DATA  = 5
     };
 
-	ClusterCom(uint8_t pinRx = 27, uint8_t pinTx = 26, uint8_t pwrRx = 25, uint8_t pwrTx = 33, uint32_t serialBaud = 9600, uint8_t id = 0);
+	ClusterCom(uint8_t pinRx = 27, uint8_t pinTx = 26, uint8_t pwrRx = 25, uint8_t pwrTx = 33, uint32_t serialBaud = 9600, uint8_t id = 255);
 
-	void begin(const char* encryptkey = nullptr, uint8_t id = 0);
-	bool send(const char* msg, uint8_t receiver = 1, MT mt = DATA, uint8_t id = 0);
+	void begin(const char* encryptkey = nullptr, uint16_t eepromSize = EEPROM_SIZE, uint16_t idEepromAddress = ID_EEPROME_ADDRESS, uint16_t masterIdEepromAddress = MASTER_ID_EEPROME_ADDRESS);
+	bool send(const char* msg, uint8_t receiver = 1, MT mt = DATA, uint8_t id = 255);
 	bool available(uint8_t &mt, String &msg);
-	bool setId();
+	bool getId();
+	void setId(uint8_t id, bool storeInEeprom = false);
 	void enable();
 	void disable();
 
@@ -52,7 +58,7 @@ class ClusterCom {
   private:
 	String message();
 	uint8_t messageType();
-	bool reciveId(const char* randStr);
+	bool reciveId(const char* mac);
 
 	// Instantiate ASK communication 
 	RH_ASK rfCom;
@@ -73,6 +79,9 @@ class ClusterCom {
 	uint8_t _pwrRx; // Power pin, enable/disable  RF reciver module
 	uint8_t _pwrTx; // Power pin, enable/disable RF transmitter module
 	uint8_t _id; // Device id
+
+	uint16_t _idEepromAddress;
+	uint16_t _masterIdEepromAddress;
 
 };
 #endif

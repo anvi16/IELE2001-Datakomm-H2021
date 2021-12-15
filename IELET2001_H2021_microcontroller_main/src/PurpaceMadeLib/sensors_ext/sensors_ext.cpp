@@ -46,8 +46,8 @@ GPS::GPS(int baudGPS, long baudSerial, int pinPS, int pinTx, int pinRx):
     sec =       0;
     ms =        0;
 
-
     // Define the pin powering the GPS module as an output
+    
     pinMode(GPSPsPin, OUTPUT);
 
     Serial.begin(baudSerial);
@@ -157,9 +157,6 @@ void GPS::refresh(bool syncDateTime = HIGH){
             Serial.println("Update failed:     Location");
         #endif
     }
-
-    
-    
 
 
     /*--------------------------------------------------------------------
@@ -394,3 +391,38 @@ float WeatherStation::getPressHPa(){
     return _pressAvgHPa;
 
 };
+
+
+
+
+//////////////////////////////////////////////////////
+//                                                  //
+//                     UNIT DATA                    //
+//                                                  //
+//////////////////////////////////////////////////////
+
+UnitData::UnitData(int pinBattery){ // Constructor
+    
+    // Battery
+    batteryReadPin = pinBattery;
+    
+}
+
+void UnitData::enable(){
+
+    // Set pinmode for battery surveilance pin
+    pinMode(batteryReadPin, INPUT);
+
+}
+
+void UnitData::refresh(){
+
+    // Battery
+    batteryVoltage = analogRead(batteryReadPin);
+    batteryPercent = map(batteryVoltage, 1750, 2550, 0, 100);
+
+}
+
+int UnitData::getBatteryPercent(){
+    return(batteryPercent);
+}

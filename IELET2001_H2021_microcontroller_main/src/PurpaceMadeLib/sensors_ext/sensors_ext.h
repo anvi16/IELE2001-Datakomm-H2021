@@ -178,6 +178,21 @@ class WeatherStation{
 
 };
 
+class UnitData{
+    private:
+
+        // Batterystate
+        int batteryReadPin;
+        int batteryVoltage;
+        int batteryPercent;
+
+    public:
+        UnitData(int pinBattery); // Constructor
+        void enable();
+        void refresh();
+        int getBatteryPercent();
+
+};
 
 struct WeatherData{
 

@@ -34,9 +34,16 @@ const int btnS1 =           0;
 const int btnS2 =           35;
 
 // Display
-const int backLight =        4;
+const int backLight =       4;
 
+// Battery surveilance
+const int batteryPin =      36;
 
+// Set up eeprom storage
+#define EEPROM_SIZE 200
+#define NUMB_OF_SLAVES_ADDRESS 10
+#define ID_EEPROME_ADDRESS 100
+#define MASTER_ID_EEPROME_ADDRESS 101
 
 
 //////////////////////////////////////////////////////
@@ -88,4 +95,15 @@ const char *WIFI_SSID = "ClusterNet";                                   // WiFi 
 const char *WIFI_PASS = "ClusterNet";                                   // WiFi : PW   General cluster network
 
 
+
+//////////////////////////////////////////////////////
+//                                                  //
+//                       Sleep                      //
+//                                                  //
+//////////////////////////////////////////////////////
+
+#define uS_TO_S_FACTOR 1000000 /* C onversion factor for micro seconds to seconds */
+#define mS_TO_S_FACTOR 1000
+#define TIME_TO_SLEEP 6000       /* Time ESP32 will go to sleep (in seconds) */
+#define TIME_TO_SLEEP_CHECK 6000 // How often to check if the contitions for sleep mode are met
 
