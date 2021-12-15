@@ -13,18 +13,16 @@ class DisplayTTGO{
             /* 
             0 - Disable
             1 - Lock screen
-            2 - Master / slave menu
-            3 - Boot Screen
+            2 - Message Screen
         */
 
         bool master;
         int batteryPercent;
         float batteryVoltage;
 
+        // Data to be displayed on lock screen
         float lockScreenData[6];                // Temp, hum, press, lat, lng, alt
         float lockScreenData_prev[6];           // Temp, hum, press, lat, lng, alt
-
-
         
         // Vars for comparing updates between scans
         int min_prev;                           // Time update
@@ -32,11 +30,9 @@ class DisplayTTGO{
         int batteryVoltage_prev;                // Battery update
         int displayNumber_prev;                 // Screen update
 
-
         // Strings to be displayed
         String str[10] = {};                    // 0 = Header, rest = line
         String str_prev[10] = {};               // 0 = Header, rest = line
-
         
         // Hardware pin
         int _pinBL;
@@ -46,7 +42,6 @@ class DisplayTTGO{
         void drawTime();
         void drawMessageScreenStrings();
         void drawMaster();                      // Draw master symbol
-
 
     public: 
         // Constructor

@@ -68,11 +68,11 @@ String callbackPayload = "";
 bool firstScan = HIGH;
 
 // ClusterCom
-uint8_t id = 255;      // Device id / Default = 255
+uint8_t id = 255;                               // Device id / Default = 255
 uint8_t numbOfSlaves = 0;
-String msg;          // Buffer for incoming message
-uint8_t mt;          // Buffer for messageType
-bool master = false; // True if device is master
+String msg;                                     // Buffer for incoming message
+uint8_t mt;                                     // Buffer for messageType
+bool master = false;                            // True if device is master
 
 
 /****************************************
@@ -132,87 +132,57 @@ void auxLoop()
 {
   gps.refresh(true);                            // Update data from GPS and syncronize time and date
   unit.refresh();                               // Update data from unit (battery state)
-  ws.refresh();
+  ws.refresh();                                 // Update data from weather station
   
   // Move relevant data to display object and draw lock screen
   display.setBatteryState(  unit.getBatteryPercent(), 
                             unit.getBatteryVoltage());
-  display.setLockScreenData(ws.getTempC(), 
-                            ws.getHum(), 
-                            ws.getPressHPa(), 
-                            gps.getLatitude(),
-                            gps.getLongitude(),
-                            gps.getAltitude());
+  display.setLockScreenData(ws.getTempC(),      // Temperature
+                            ws.getHum(),        // Humidity
+                            ws.getPressHPa(),   // Pressure
+                            gps.getLatitude(),  // Latitude
+                            gps.getLongitude(), // Longitude
+                            gps.getAltitude()); // Altitude
   display.selectLockScreen();
   display.refresh();
-
-  espDelay(3000);
-
-  //display.selectBlackScreen();
-  //display.refresh();
-
-  //espDelay(3000);
 
 }
 
 
-void commLoop()
-{
-/*
-  WeatherData weatherData; 
+void commLoop(){
 
-  for (int unit = 0; unit < 100; unit++){
-    weatherData.lat = 0;
-    weatherData.lng = 0;
-    weatherData.alt = 0;
-
-  }
-
-  
-
-  // Format latitude and longitude in a string
-  char gpsData[1000] = "";
-  sprintf(gpsData, "\"lat\":%.6f, \"lng\":%.6f", weatherData.lat, weatherData.lng);
-
-*/  
-
-
-
-
-  // Ubidots
-  if (!ubidots.connected()){                    // Reconnect to ubidots 
-    ubidots.reconnect();
-    ubidots.subscribe("/v2.0/devices/3/temperature/lv");
-  }
-
-  // triggers the routine every 5 seconds
-  if (abs(millis() - ubiPubTS) > ubiPubFreq) 
-  {
-    char gpsData[1000] = "";
+  if (master){
     
-    // Format latitude and longitude in a string
-    sprintf(gpsData, "\"lat\":%.6f, \"lng\":%.6f", gps.getLatitude(), gps.getLongitude());
+    // Ubidots
+    if (!ubidots.connected()){                  // Reconnect to ubidots if not connected
+      ubidots.reconnect();
+      ubidots.subscribe("/v2.0/devices/3/temperature/lv");
+    }
 
-    // Ubidots publish
-    //          "Variable label"  "Value"         "Context"
-    ubidots.add("gps",            1,              gpsData   );  // Generate / update GPS variable in Ubidots 
-    ubidots.add("temperature",    ws.getTempC()             );  // Generate / update temperature variable in Ubidots
-    ubidots.add("Humidity",       ws.getHum()               );  // Generate / update humidity variable in Ubidots
-    ubidots.add("Pressure [hPa]", ws.getPressHPa()          );  // Generate / update pressure variable in Ubidots
+    // triggers the routine every 5 seconds
+    if (abs(millis() - ubiPubTS) > ubiPubFreq) 
+    {
+      char gpsData[1000] = "";
+      
+      // Format latitude and longitude in a string
+      sprintf(gpsData, "\"lat\":%.6f, \"lng\":%.6f", gps.getLatitude(), gps.getLongitude());
 
-    // ubidots.publish(DEVICE_LABEL);              // Publish buffer to Ubidots
-    ubidots.publish("3");              // Publish buffer to Ubidots
+      // Ubidots publish
+      //          "Variable label"  "Value"         "Context"
+      ubidots.add("gps",            1,              gpsData   );  // Generate / update GPS variable in Ubidots 
+      ubidots.add("temperature",    ws.getTempC()             );  // Generate / update temperature variable in Ubidots
+      ubidots.add("Humidity",       ws.getHum()               );  // Generate / update humidity variable in Ubidots
+      ubidots.add("Pressure [hPa]", ws.getPressHPa()          );  // Generate / update pressure variable in Ubidots
 
-    // Serial.println();
-    // Serial.println("SUB: ");
-    // Serial.println(ubidots.subscribe("/v2.0/devices/3/temperature/lv"));
-    // Serial.println();
+      ubidots.publish("3");                       // Publish buffer to Ubidots
 
-    ubidots.subscribe("/v2.0/devices/3/temperature/lv");
+      ubidots.subscribe("/v2.0/devices/3/temperature/lv");
 
-    ubiPubTS = millis();
+      ubiPubTS = millis();
+    }
+    ubidots.loop();
   }
-  ubidots.loop();
+
 
   // Recive incomming messages from RF module
   if(CCom.available(mt, msg))
@@ -438,5 +408,6 @@ void loop(){
   auxLoop();                                    // Loop all auxiliary utensils
   //commLoop();                                   // Loop communication utensils
   //serialPrints();                               // Run all desired prints
+  
   
 }

@@ -85,12 +85,6 @@ unsigned long ubiPubTS;                                                 // Ubido
 
 // List of WiFi networks commonly used during development
 
-// const char *WIFI_SSID = "Inteno-D81D";                               // WiFi : SSID Latinskolegata 1, Aalesund
-// const char *WIFI_PASS = "XJRBC6IITC42CO";                            // WiFi : PW   Latinskolegata 1, Aalesund
-
-// const char *WIFI_SSID = "Playboy Penthouse Solsiden";                   // WiFi : SSID Dyre Halses gate 4, Trondheim
-// const char *WIFI_PASS = "hughhefner";                                   // WiFi : PW   Dyre Halses gate 4, Trondheim
-
 const char *WIFI_SSID = "ClusterNet";                                   // WiFi : SSID General cluster network
 const char *WIFI_PASS = "ClusterNet";                                   // WiFi : PW   General cluster network
 
