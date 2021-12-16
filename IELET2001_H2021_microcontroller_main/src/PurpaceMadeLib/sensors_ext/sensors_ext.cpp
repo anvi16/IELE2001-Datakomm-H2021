@@ -418,23 +418,15 @@ void UnitData::enable(){
 void UnitData::refresh(){
 
     // Battery
-<<<<<<< Updated upstream
     batteryPercent = map(analogRead(batteryReadPin), 1750, 2550, 0, 100);
     batteryVoltage = map(analogRead(batteryReadPin), 1750, 2550, 0, 3.3);
-=======
-    batteryVoltage = analogRead(batteryReadPin);
-    batteryPercent = map(batteryVoltage, 1750, 2550, 0, 100);
->>>>>>> Stashed changes
 
 }
 
 int UnitData::getBatteryPercent(){
     return(batteryPercent);
-<<<<<<< Updated upstream
 }
 
 float UnitData::getBatteryVoltage(){
     return(batteryVoltage);
-=======
->>>>>>> Stashed changes
 }

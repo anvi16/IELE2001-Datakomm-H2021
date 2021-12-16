@@ -1,9 +1,6 @@
-<<<<<<< Updated upstream
-=======
 
 #include "config.h"                             // Config file for HW pins, baud etc.
 
->>>>>>> Stashed changes
 // Include libraries
 #include <Arduino.h>                            // General Arduino C++ lib
 #include <TinyGPS++.h>                          // GPS lib for easy extraction of GPS data
@@ -15,10 +12,7 @@
 #include <SPI.h>                                // SPI lib. TFT lib depends on this
 #include <Wire.h>
 #include <EEPROM.h>
-<<<<<<< Updated upstream
 #include <JC_Button.h>
-=======
->>>>>>> Stashed changes
 
 // Include files with dependencies
 #include "PurpaceMadeLib/sensors_ext/sensors_ext.h"         // File containging classes related to peripheral sensors (GPS, temp, hum, press)
@@ -76,12 +70,9 @@ DisplayTTGO display(backLight);
 // Unit data 
 UnitData unit(batteryPin);
 
-<<<<<<< Updated upstream
 // Button S2
 Button S2(btnS2, true);
 
-=======
->>>>>>> Stashed changes
 
 
 
@@ -96,29 +87,6 @@ bool firstScan = HIGH;
 String ubidotsId;
 
 // ClusterCom
-<<<<<<< Updated upstream
-uint8_t id = 255;                               // Device id / Default = 255
-uint8_t numbOfSlaves = 0;
-String msg;                                     // Buffer for incoming message
-uint8_t mt;                                     // Buffer for messageType
-bool master = false;                            // True if device is master
-
-
-/****************************************
-* Sleep Mode Functions
-****************************************/
-
-void IRAM_ATTR onTimer()
-{
-  portENTER_CRITICAL_ISR(&timerMux);
-  if (millis() - buttonTimer > sleepTimer)
-  {
-    esp_deep_sleep_start();
-  }
-  portEXIT_CRITICAL_ISR(&timerMux);
-}
-
-=======
 //uint8_t id = 255;      // Device id / Default = 255
 uint8_t numbOfSlaves = 0;
 String msgStr;          // Buffer for incoming message
@@ -142,7 +110,6 @@ void IRAM_ATTR onTimer()
   portEXIT_CRITICAL_ISR(&timerMux);
 }
 
->>>>>>> Stashed changes
 void ISRbuttonTimer()
 {
   buttonTimer = millis();
@@ -182,7 +149,6 @@ void espDelay(int ms)
 }
 
 
-<<<<<<< Updated upstream
 void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, float alt, int batt){
 
   // Connection
@@ -210,31 +176,6 @@ void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, f
 
   ubidots.publish(id.c_str());                       // Publish buffer to Ubidots
   ubidots.loop();
-=======
-void auxLoop()
-{
-  gps.refresh(HIGH);                                // Update data from GPS
-  unit.refresh();
-
-  display.selectLockScreen();
-  display.refresh(unit.getBatteryPercent());
-
-  // display.showLockScreen(unit.getBatteryPercent());
-
-  if (digitalRead(btnS1)){
-    Serial.println("");
-    Serial.println("Left");
-    Serial.println("");
-  };
-
-  if (!digitalRead(btnS2)){
-    Serial.println("");
-    Serial.println("Right");
-    Serial.println("");
-  };
-
-  // espDelay(100);
->>>>>>> Stashed changes
 
   // ubidots.subscribe("/v2.0/devices/3/temperature/lv");
   // ubiPubTS = millis();
@@ -281,34 +222,11 @@ void commLoop(){
       ubiPubTS = millis();
     }
   }
-<<<<<<< Updated upstream
-
-=======
-  ubidots.loop(); 
->>>>>>> Stashed changes
 
   // Recive incomming messages from RF module
   if(CCom.available(&mt, &msgStr, &msgFloat, &from))
   {
     Serial.println(mt);
-<<<<<<< Updated upstream
-    Serial.println(msg);
-
-    
-    switch (mt)
-    {
-      case CCom.PING:
-        /* code */
-        break;
-      case CCom.ID:
-        if(master)
-        {
-          if(numbOfSlaves < 100)
-          {
-            CCom.send(msg.c_str(), 255, CCom.ID, numbOfSlaves +2); // Address between 2-101 
-            EEPROM.write(numbOfSlaves++, NUMB_OF_SLAVES_ADDRESS);
-            //EEPROM.commit();
-=======
 
     switch (mt)
     {
@@ -327,21 +245,11 @@ void commLoop(){
               EEPROM.write(numbOfSlaves++, NUMB_OF_SLAVES_ADDRESS);   // Store number of slaved addressed
               //EEPROM.commit();
             }
->>>>>>> Stashed changes
           }
 
         }
         break;
       case CCom.SLEEP:
-<<<<<<< Updated upstream
-        /* code */
-        break;
-      case CCom.ERROR:
-        /* code */
-        break;
-      case CCom.DATA:
-        /* code */
-=======
          // Go to sleep and for how long
         break;
       case CCom.ERROR:
@@ -354,19 +262,15 @@ void commLoop(){
           //Push data
 
 
->>>>>>> Stashed changes
         break;
       default:
           // Unknown massege type
         break;
     }
-<<<<<<< Updated upstream
-=======
     mt       = 255;
     msgStr.clear();
     msgFloat = 0;
     from     = 255;
->>>>>>> Stashed changes
   }
 
 }
@@ -380,13 +284,8 @@ void commLoop(){
 
 
 
-<<<<<<< Updated upstream
-=======
-  espDelay(2000); 
->>>>>>> Stashed changes
 
 
-<<<<<<< Updated upstream
 
 
 //////////////////////////////////////////////////////
@@ -400,6 +299,8 @@ void setup() {
   Serial.begin(serialBaud);  
   espDelay(1000);
 
+  EEPROM.begin(EEPROM_SIZE);
+
   display.selectMessageScreen();
   display.setString(0, "Startup");
   display.setString(2, "Unit is booting up.");
@@ -410,47 +311,17 @@ void setup() {
 
   // Button object begin to enable monitoring of 
   S2.begin();
-=======
-  pinMode(btnS1, INPUT);
-  pinMode(btnS2, INPUT);
-
-  EEPROM.begin(EEPROM_SIZE);
-
-  // Ubidots 
-  // ubidots.setDebug(true);  // uncomment this to make debug messages available
-  ubidots.connectToWifi(WIFI_SSID, WIFI_PASS);
-  ubidots.setCallback(UbisoftCallback);
-  ubidots.setup();
-  ubidots.reconnect();
-  ubiPubTS = millis(); 
-  ubidotsId = WiFi.macAddress();
-
-  // ClusterCom / setup crypt key and eeprom storage
-  CCom.begin(UBIDOTS_TOKEN, EEPROM_SIZE, ID_EEPROME_ADDRESS);
-  CCom.enable();  // Power up radio transmission modules
-
-  if(!master) 
-  {
-    bool err = !CCom.getId();
-    if (err) Serial.println("Failed to get id");
-  }
-  else 
-  {
-    CCom.setId(CCom.masterId, true);  // Set device to master id   
-
-  }
->>>>>>> Stashed changes
 
   // Enable external sensors
   gps.enable();                                 // Power up GPS module and establish serial com 
   ws.enable();                                  // Establish I2C com with Weather Station
-<<<<<<< Updated upstream
   CCom.enable();                                // Power up radio transmission modules
   unit.enable();                                // Set pinmode for battery surveilance
   espDelay(1000); 
   unit.refresh();
-  
 
+  ubidotsId = WiFi.macAddress();
+  
   // MASTER / SLAVE
   display.setString(0, "Startup");
   display.setString(2, "For \"Master\"");
@@ -507,7 +378,7 @@ void setup() {
     display.setString(6, "ClusterCom...");
     display.refresh();
     CCom.begin(UBIDOTS_TOKEN, EEPROM_SIZE, ID_EEPROME_ADDRESS);
-    CCom.setId(1, true);                        // Set device to master id
+    CCom.setId(CCom.masterId, true);                        // Set device to master id
 
     display.setString(5, "Configured!");
     display.setString(6, "");
@@ -601,42 +472,4 @@ void loop(){
 
   espDelay(5000);
   
-=======
-  unit.enable();                                // Set pinmode for battery surveilance
-
-/* 
-  // Sleep 
-  hw_timer = timerBegin(0, 80, true);
-  timerAttachInterrupt(hw_timer, &onTimer, true);
-  timerAlarmWrite(hw_timer, 1000000, true);
-  timerAlarmEnable(hw_timer);
-  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-
-  attachInterrupt(btnS1, ISRbuttonTimer, RISING);
-  attachInterrupt(btnS2, ISRbuttonTimer, RISING);
-
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_35, 0);
-
-  esp_sleep_wakeup_cause_t wakeup_reason;
-  wakeup_reason = esp_sleep_get_wakeup_cause();
-  switch (wakeup_reason)
-  {
-  case ESP_SLEEP_WAKEUP_EXT0:
-    Serial.println("Wakeup:Button");
-    break;
-  case ESP_SLEEP_WAKEUP_TIMER:
-    Serial.println("Wakeup:Timer");
-    break;
-  }
- */
-}
-
-
-void loop(){
- 
-  auxLoop();                                    // Loop all auxiliary utensils
-  commLoop();                                   // Loop communication utensils
-  //serialPrints()                             // Run all desired prints
-
->>>>>>> Stashed changes
 }

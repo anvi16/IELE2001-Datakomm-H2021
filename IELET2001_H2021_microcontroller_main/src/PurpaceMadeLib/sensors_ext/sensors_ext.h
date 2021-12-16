@@ -188,16 +188,10 @@ class UnitData{
 
     public:
         UnitData(int pinBattery); // Constructor
-<<<<<<< Updated upstream
         void    enable();
         void    refresh();
         int     getBatteryPercent();
         float   getBatteryVoltage();
-=======
-        void enable();
-        void refresh();
-        int getBatteryPercent();
->>>>>>> Stashed changes
 
 };
 
