@@ -69,23 +69,23 @@ Button S2(btnS2, true);
 
 
 /****************************************
-* Variables Functions
+* Global buffer variables 
 ****************************************/
-
-String callbackPayload = "";
-bool firstScan = HIGH;
 
 // Ubidots
 String ubidotsId;
+String callbackPayload = "";
 
 // ClusterCom
-//uint8_t id = 255;      // Device id / Default = 255
-uint8_t numbOfSlaves = 0;
-String msgStr;          // Buffer for incoming message
-float msgFloat;
-uint8_t mt;          // Buffer for messageType
-uint8_t from;       // ID to device transmitting
-bool master = false; // True if device is master
+//uint8_t id = 255;         // Device id / Default = 255
+uint8_t mt;                 // Buffer for messageType
+String  msgStr;             // Buffer for incoming message
+float   msgFloat;
+uint8_t from;               // ID to sender of the incoming message
+
+uint8_t numbOfSlaves = 0;   // Remember how many slaves this master has addressed
+
+bool master = false;        // True if device is master
 
 
 /****************************************
@@ -201,7 +201,7 @@ void commLoop(){
 
   if (master){
     if (ubidots.connected() && (millisRollover || ((millis() - ubiPubTS) > ubiPubFreq))){
-      ubiPubWeather(  WiFi.macAddress(),
+      ubiPubWeather(  ubidotsId,
                       ws.getTempC(),
                       ws.getHum(),
                       ws.getPressHPa(),
@@ -217,8 +217,6 @@ void commLoop(){
   // Recive incomming messages from RF module
   if(CCom.available(&mt, &msgStr, &msgFloat, &from))
   {
-    Serial.println(mt);
-
     switch (mt)
     {
       case CCom.PING:
@@ -227,41 +225,58 @@ void commLoop(){
       case CCom.ID:   // Respond on slave id request
         if(master)
         {
-          if(numbOfSlaves < 10 && from == 0)
+          if(numbOfSlaves < ALLOWED_SLAVES && from == 0)
           {
-            if(CCom.send(msgStr.c_str(), 0, CCom.ID, numbOfSlaves +2));   // Address between 2-11
+            if(CCom.send(msgStr.c_str(), 0, CCom.ID, numbOfSlaves +2));                           // Address between 2-11
             {
-              Serial.println(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC * numbOfSlaves);
               EEPROM.writeString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC * numbOfSlaves, msgStr);   // Store slave device mac address
-              EEPROM.write(numbOfSlaves++, NUMB_OF_SLAVES_ADDRESS);   // Store number of slaved addressed
+              EEPROM.write(numbOfSlaves++, NUMB_OF_SLAVES_ADDRESS);                               // Store number of slaved addressed
               //EEPROM.commit();
             }
+          }else{
+            if(from == 0) CCom.send("Full", 0, CCom.ID);
           }
-
         }
         break;
-      case CCom.SLEEP:
-         // Go to sleep and for how long
+      case CCom.SLEEP:    // Go to sleep and for how long
+         
         break;
-      case CCom.ERROR:
-          // Handel error that har occured on slave devices 
+      case CCom.ERROR:    // Handel error that har occured on slave devices
+           
         break;
-      case CCom.DATA:
-          // Handel data from slave device 
+      case CCom.DATA:     // Handel data from slave device 
+          
           if(msgStr)   Serial.println(msgStr);
           if(msgFloat) Serial.println(msgFloat);
-          //Push data
 
+          if(from > 1 && from < ALLOWED_SLAVES+2){   // 1 < from < allowedSlaves, is a valid slave id
+            //Push data
+            String currentSlaveMac = EEPROM.readString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC *(from -2));
 
+            //ubiPubWeather(currentSlaveMac, );
+
+          }
         break;
-      default:
-          // Unknown massege type
-        break;
+      default:            // Unknown massege type
+
     }
-    mt       = 255;
+    mt       = 0;
     msgStr.clear();
     msgFloat = 0;
     from     = 255;
+  }
+
+  if(!master) // && dataIsReady)   // Push data to master
+  {
+    ws.getTempC();
+    ws.getHum();
+    ws.getPressHPa();
+    gps.getLatitude();
+    gps.getLongitude();
+    gps.getAltitude();
+    unit.getBatteryPercent();
+
+    //CCom.send();
   }
 
 }
@@ -370,6 +385,8 @@ void setup() {
     display.refresh();
     CCom.begin(UBIDOTS_TOKEN, EEPROM_SIZE, ID_EEPROME_ADDRESS);
     CCom.setId(CCom.masterId, true);                        // Set device to master id
+    if(EEPROM.read(NUMB_OF_SLAVES_ADDRESS) != 255) 
+      numbOfSlaves = EEPROM.read(NUMB_OF_SLAVES_ADDRESS);   // Recall from storage
 
     display.setString(5, "Configured!");
     display.setString(6, "");

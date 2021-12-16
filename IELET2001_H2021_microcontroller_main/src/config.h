@@ -94,6 +94,14 @@ const char *WIFI_PASS = "ClusterNet";                                   // WiFi 
 #define LWIP_DONT_PROVIDE_BYTEORDER_FUNCTIONS
 
 
+//////////////////////////////////////////////////////
+//                                                  //
+//                   CLUSTERCOM                     //
+//                                                  //
+//////////////////////////////////////////////////////
+
+#define ALLOWED_SLAVES 10
+
 
 //////////////////////////////////////////////////////
 //                                                  //
