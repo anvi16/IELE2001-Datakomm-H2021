@@ -22,12 +22,32 @@
 #include <SPI.h>
 #include <WiFi.h>
 #include <EEPROM.h>
+<<<<<<< Updated upstream
 
 #define MAX_PACKET_SIZE 47
 #define ID_EEPROME_ADDRESS 100
 #define MASTER_ID_EEPROME_ADDRESS 101
 #define EEPROM_SIZE 200
 #define DEBUG
+=======
+
+#ifndef MAX_PACKET_SIZE
+	#define MAX_PACKET_SIZE 47
+#endif
+#ifndef ID_EEPROME_ADDRESS
+	#define ID_EEPROME_ADDRESS 100
+#endif
+#ifndef MASTER_ID_EEPROME_ADDRESS
+	#define MASTER_ID_EEPROME_ADDRESS 101
+#endif
+#ifndef EEPROM_SIZE 
+	#define EEPROM_SIZE 200
+#endif
+#ifndef DEBUG 
+	#define DEBUG
+#endif
+
+>>>>>>> Stashed changes
 
 class ClusterCom {
 
@@ -46,19 +66,32 @@ class ClusterCom {
 	ClusterCom(uint8_t pinRx = 27, uint8_t pinTx = 26, uint8_t pwrRx = 25, uint8_t pwrTx = 33, uint32_t serialBaud = 9600, uint8_t id = 255);
 
 	void begin(const char* encryptkey = nullptr, uint16_t eepromSize = EEPROM_SIZE, uint16_t idEepromAddress = ID_EEPROME_ADDRESS, uint16_t masterIdEepromAddress = MASTER_ID_EEPROME_ADDRESS);
+<<<<<<< Updated upstream
 	bool send(const char* msg, uint8_t receiver = 1, MT mt = DATA, uint8_t id = 255);
 	bool available(uint8_t &mt, String &msg);
+=======
+	bool send(const char* msg, uint8_t receiver = 1, MT mt = DATA, uint8_t id = 0);
+	bool send(float msg, uint8_t receiver = 1, MT mt = DATA, uint8_t id = 0);
+	bool available(uint8_t *mt, String *msgStr, float *msgFloat, uint8_t* id);
+>>>>>>> Stashed changes
 	bool getId();
 	void setId(uint8_t id, bool storeInEeprom = false);
 	void enable();
 	void disable();
 
-	uint8_t masterId = 0; // If connected to master
+	uint8_t masterId = 1; // If connected to master
 
   private:
+<<<<<<< Updated upstream
 	String message();
 	uint8_t messageType();
 	bool reciveId(const char* mac);
+=======
+  	bool send(float msgFloat, const char* msgStr, uint8_t receiver = 1, MT mt = DATA, uint8_t id = 0);
+	void readRecivedData(uint8_t *mt, String *msgStr, float *msgFlot, uint8_t *id = nullptr);
+	bool reciveId(String mac);
+	
+>>>>>>> Stashed changes
 
 	// Instantiate ASK communication 
 	RH_ASK rfCom;
@@ -68,10 +101,15 @@ class ClusterCom {
 	RHEncryptedDriver driver;
 	// Class to manage message delivery and receipt, using the driver declared above
 	RHReliableDatagram manager;
+
 	// The key MUST be the same on all devices
 	unsigned char _encryptkey[16] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 };
 
+	StaticJsonDocument<MAX_PACKET_SIZE> Json_Buffer;
+
 	uint8_t _buf[RH_ASK_MAX_MESSAGE_LEN];
+	uint8_t messageType;
+	String message;
 
 	uint32_t _serialBaud;
 	uint8_t _pinRx; // Serial interrupt pin to receive data

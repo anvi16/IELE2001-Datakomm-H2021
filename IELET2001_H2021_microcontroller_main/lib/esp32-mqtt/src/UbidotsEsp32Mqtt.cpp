@@ -198,6 +198,7 @@ void Ubidots::reconnect() {
       Serial.print(_clientMqttUbi.state());
       Serial.println(" try again in 3 seconds");
       delay(3000);
+      break;
     }
   }
 }

@@ -40,10 +40,20 @@ const int backLight =       4;
 const int batteryPin =      36;
 
 // Set up eeprom storage
+<<<<<<< Updated upstream
 #define EEPROM_SIZE 200
 #define NUMB_OF_SLAVES_ADDRESS 10
 #define ID_EEPROME_ADDRESS 100
 #define MASTER_ID_EEPROME_ADDRESS 101
+=======
+#define EEPROM_SIZE 400
+#define SIZE_OF_MAC 18
+
+#define NUMB_OF_SLAVES_ADDRESS 10
+#define ID_EEPROME_ADDRESS 100
+#define MASTER_ID_EEPROME_ADDRESS 101
+#define MAC_ADDRESS_SLAVE_START 200
+>>>>>>> Stashed changes
 
 
 //////////////////////////////////////////////////////
@@ -88,6 +98,8 @@ unsigned long ubiPubTS;                                                 // Ubido
 const char *WIFI_SSID = "ClusterNet";                                   // WiFi : SSID General cluster network
 const char *WIFI_PASS = "ClusterNet";                                   // WiFi : PW   General cluster network
 
+#define LWIP_DONT_PROVIDE_BYTEORDER_FUNCTIONS
+
 
 
 //////////////////////////////////////////////////////
@@ -101,3 +113,32 @@ const char *WIFI_PASS = "ClusterNet";                                   // WiFi 
 #define TIME_TO_SLEEP 6000       /* Time ESP32 will go to sleep (in seconds) */
 #define TIME_TO_SLEEP_CHECK 6000 // How often to check if the contitions for sleep mode are met
 
+
+/* 
+Weather
+    Temperature Float
+    Pressure    Float
+    Humidity    Float
+
+GPS
+    Lat         Float
+    Lng         Float
+    Altitude    Float
+
+<<<<<<< Updated upstream
+//////////////////////////////////////////////////////
+//                                                  //
+//                       Sleep                      //
+//                                                  //
+//////////////////////////////////////////////////////
+
+#define uS_TO_S_FACTOR 1000000 /* C onversion factor for micro seconds to seconds */
+#define mS_TO_S_FACTOR 1000
+#define TIME_TO_SLEEP 6000       /* Time ESP32 will go to sleep (in seconds) */
+#define TIME_TO_SLEEP_CHECK 6000 // How often to check if the contitions for sleep mode are met
+
+=======
+General
+    Battery %   Int
+     */
+>>>>>>> Stashed changes
