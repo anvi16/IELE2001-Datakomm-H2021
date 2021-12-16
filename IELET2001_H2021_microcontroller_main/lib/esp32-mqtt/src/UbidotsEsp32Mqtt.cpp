@@ -193,7 +193,9 @@ void Ubidots::reconnect() {
     if (_clientMqttUbi.connect(_clientName, _token, _token)) {
       Serial.println("connected");
       break;
-    } else {
+    }
+
+    else {
       Serial.print("failed, rc=");
       Serial.print(_clientMqttUbi.state());
       Serial.println(" try again in 3 seconds");
