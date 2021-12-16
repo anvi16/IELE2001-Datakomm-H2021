@@ -42,8 +42,8 @@ class Ubidots {
   bool _debug = false;
   int8_t _currentContext = 0;
   uint8_t _currentValue;
-  char* _ssidPassword;
-  char* _ssid;
+  const char* _ssidPassword;
+  const char* _ssid;
   char* _token;
   Value* _dotValue;
   void _floatToChar(char* strValue, float value);

@@ -76,7 +76,7 @@ static const uint32_t GPSBaud = 9600;
 // Publish variables
 const char *UBIDOTS_TOKEN = "BBFF-pzGZkRPVMO7baDRylwiST623Ow5DrF";      // Token corresponding to IELET2001 2021 gr30
 const char *DEVICE_LABEL = "Aalesund";                                  // Ubidots: Device label to which data will be published
-const int ubiPubFreq = 5000;                                            // Ubidots: Publish rate (ms between pub)
+const int ubiPubFreq = 60*1000;                                         // Ubidots: Publish rate (ms between pub)
 unsigned long ubiPubTS;                                                 // Ubidots: Timestamp for last publish
 
 

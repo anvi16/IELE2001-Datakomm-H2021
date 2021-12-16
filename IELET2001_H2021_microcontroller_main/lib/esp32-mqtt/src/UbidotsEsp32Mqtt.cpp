@@ -188,20 +188,25 @@ bool Ubidots::loop() { return _clientMqttUbi.loop(); };
  * This is a blocking function
  */
 void Ubidots::reconnect() {
-  while (!_clientMqttUbi.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    if (_clientMqttUbi.connect(_clientName, _token, _token)) {
-      Serial.println("connected");
-      break;
-    }
+  while (!_clientMqttUbi.connected()){ 
+    if(WiFi.status() != WL_CONNECTED) {WiFi.begin(_ssid, _ssidPassword);}
+    
+    for (int i = 0; i<5; i++){
+      Serial.print("Attempting MQTT connection...");
+      if (_clientMqttUbi.connect(_clientName, _token, _token)) {
+        Serial.println("connected");
+        break;
+      }
 
-    else {
-      Serial.print("failed, rc=");
-      Serial.print(_clientMqttUbi.state());
-      Serial.println(" try again in 3 seconds");
-      delay(3000);
-      break;
+      else {
+        Serial.print("failed, rc=");
+        Serial.print(_clientMqttUbi.state());
+        Serial.println(" try again in 3 seconds");
+        delay(3000);
+        // break;
+      }
     }
+    break;
   }
 }
 
@@ -308,6 +313,9 @@ void Ubidots::setDebug(bool debug) { _debug = debug; };
  */
 void Ubidots::connectToWifi(const char* ssid, const char* pass) {
   WiFi.begin(ssid, pass);
+  
+  _ssid = ssid;
+  _ssidPassword = pass;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");

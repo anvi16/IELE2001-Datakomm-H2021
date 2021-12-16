@@ -20,14 +20,6 @@
 #include "PurpaceMAdeLib/DisplayTTGO/DisplayTTGO.h"
                                         
 
-#define DEBUG
-
-
-volatile long buttonTimer = 0;                   // Variabel som lagrer tiden siden sist knappetrykk
-int sleepTimer = TIME_TO_SLEEP * mS_TO_S_FACTOR; // Tid i millisekunder til ESPen går i deep sleep modus
-
-hw_timer_t *hw_timer = NULL;
-portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
 #define DEBUG
 
@@ -188,7 +180,6 @@ void auxLoop()
 {
   gps.refresh(true);                            // Update data from GPS and syncronize time and date
   unit.refresh();                               // Update data from unit (battery state)
-  ws.refresh();                                 // Update data from weather station
   
   // Move relevant data to display object and draw lock screen
   display.setBatteryState(  unit.getBatteryPercent(), 
@@ -209,9 +200,8 @@ void auxLoop()
 void commLoop(){
 
   if (master){
-    
-    if (millisRollover || ((millis() - ubiPubTS) > ubiPubFreq)){
-      ubiPubWeather(  "TEST",
+    if (ubidots.connected() && (millisRollover || ((millis() - ubiPubTS) > ubiPubFreq))){
+      ubiPubWeather(  WiFi.macAddress(),
                       ws.getTempC(),
                       ws.getHum(),
                       ws.getPressHPa(),
@@ -220,6 +210,7 @@ void commLoop(){
                       gps.getAltitude(),
                       unit.getBatteryPercent());
       ubiPubTS = millis();
+      Serial.println("Data published to Ubidots");
     }
   }
 
@@ -470,6 +461,6 @@ void loop(){
   
   millis_prev = millis();
 
-  espDelay(5000);
+  delay(2000);
   
 }
