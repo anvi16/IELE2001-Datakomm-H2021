@@ -65,7 +65,7 @@ class GPS{
         unsigned long timeAge;              // 
         unsigned long timeUpdateTS;         // Timestamp for last time update
   
-        const int timezoneOffset = 0;       // Central European Time
+        const int timezoneOffset = 1;       // Central European Time
 
 
     public:

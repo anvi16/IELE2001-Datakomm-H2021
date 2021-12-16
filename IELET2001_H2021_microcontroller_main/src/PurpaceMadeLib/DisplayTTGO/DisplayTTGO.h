@@ -17,6 +17,7 @@ class DisplayTTGO{
         */
 
         bool master;
+        bool ubi;
         int batteryPercent;
         float batteryVoltage;
 
@@ -42,6 +43,7 @@ class DisplayTTGO{
         void drawTime();
         void drawMessageScreenStrings();
         void drawMaster();                      // Draw master symbol
+        void drawUbi();                         // Draw Ubidots symbol
 
     public: 
         // Constructor
@@ -71,6 +73,8 @@ class DisplayTTGO{
 
         // Inform that unit is configured as master
         void setMaster();
+        void setUbi();
+        void resetUbi();
         
 
         

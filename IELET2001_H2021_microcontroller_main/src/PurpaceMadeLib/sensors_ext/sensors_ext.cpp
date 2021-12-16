@@ -29,7 +29,7 @@ GPS::GPS(int baudGPS, long baudSerial, int pinPS, int pinTx, int pinRx):
     enableStartTS =     0;
     enableTime =        10000;                  // Give GPS up to 10 seconds to connect 
     refreshStartTS =    0;                      // Initially 0
-    refreshTime =       2000;                   // 2 seconds
+    refreshTime =       150;                    // Time spent reading data from GPS
 
     // Pre-define coordinates and alt to zero-values
     lat =       0;

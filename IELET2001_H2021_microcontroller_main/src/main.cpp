@@ -26,8 +26,8 @@ int sleepTimer = TIME_TO_SLEEP * mS_TO_S_FACTOR; // Tid i millisekunder til ESPe
 hw_timer_t *hw_timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
-
-
+unsigned long millis_prev = 0;
+bool millisRollover = false;
 
 /**************************************** 
 * Instanciate objects
@@ -128,6 +128,41 @@ void espDelay(int ms)
 }
 
 
+void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, float alt, int batt){
+
+  // Connection
+  if (!ubidots.connected()){                  // Reconnect to ubidots if not connected
+      ubidots.reconnect();
+      Serial.println("Reconnecting to ubi");
+  }
+  
+  // GPS data treatment
+  char gpsData[1000] = "";
+  // Format latitude and longitude in a string
+  sprintf(gpsData, "\"lat\":%.6f, \"lng\":%.6f", lat, lng);
+
+  // Publish
+  // Check if data available                  "Tag"                 Data    Context
+  if (t   != 0.0)                 ubidots.add("Temperature",        t               );  // Generate / update temperature variable in Ubidots
+  if (h   != 0.0)                 ubidots.add("Humidity",           h               );  // Generate / update humidity variable in Ubidots
+  if (p   != 0.0)                 ubidots.add("Pressure [hPa]",     p               );  // Generate / update pressure variable in Ubidots
+  ubidots.publish(id.c_str());                       // Publish buffer to Ubidots
+  ubidots.loop();
+
+  if (batt!= 0.0)                 ubidots.add("Battery",            batt            );  // Generate / update altitude variable in Ubidots
+  if (alt != 0.0)                 ubidots.add("Altitude",           alt             );  // Generate / update altitude variable in Ubidots
+  if ((lat!= 0.0) && (lng != 0))  ubidots.add("gps",                1,      gpsData );  // Generate / update GPS variable in Ubidots
+
+  ubidots.publish(id.c_str());                       // Publish buffer to Ubidots
+  ubidots.loop();
+
+  // ubidots.subscribe("/v2.0/devices/3/temperature/lv");
+  // ubiPubTS = millis();
+}
+
+
+
+
 void auxLoop()
 {
   gps.refresh(true);                            // Update data from GPS and syncronize time and date
@@ -146,6 +181,7 @@ void auxLoop()
   display.selectLockScreen();
   display.refresh();
 
+
 }
 
 
@@ -153,34 +189,17 @@ void commLoop(){
 
   if (master){
     
-    // Ubidots
-    if (!ubidots.connected()){                  // Reconnect to ubidots if not connected
-      ubidots.reconnect();
-      ubidots.subscribe("/v2.0/devices/3/temperature/lv");
-    }
-
-    // triggers the routine every 5 seconds
-    if (abs(millis() - ubiPubTS) > ubiPubFreq) 
-    {
-      char gpsData[1000] = "";
-      
-      // Format latitude and longitude in a string
-      sprintf(gpsData, "\"lat\":%.6f, \"lng\":%.6f", gps.getLatitude(), gps.getLongitude());
-
-      // Ubidots publish
-      //          "Variable label"  "Value"         "Context"
-      ubidots.add("gps",            1,              gpsData   );  // Generate / update GPS variable in Ubidots 
-      ubidots.add("temperature",    ws.getTempC()             );  // Generate / update temperature variable in Ubidots
-      ubidots.add("Humidity",       ws.getHum()               );  // Generate / update humidity variable in Ubidots
-      ubidots.add("Pressure [hPa]", ws.getPressHPa()          );  // Generate / update pressure variable in Ubidots
-
-      ubidots.publish("3");                       // Publish buffer to Ubidots
-
-      ubidots.subscribe("/v2.0/devices/3/temperature/lv");
-
+    if (millisRollover || ((millis() - ubiPubTS) > ubiPubFreq)){
+      ubiPubWeather(  "TEST",
+                      ws.getTempC(),
+                      ws.getHum(),
+                      ws.getPressHPa(),
+                      gps.getLatitude(),
+                      gps.getLongitude(),
+                      gps.getAltitude(),
+                      unit.getBatteryPercent());
       ubiPubTS = millis();
     }
-    ubidots.loop();
   }
 
 
@@ -226,13 +245,9 @@ void commLoop(){
 }
 
 
-void serialPrints()
-{
-  Serial.println();
-  Serial.print("MQTT payload size: ");
-  Serial.println(sizeof(callbackPayload));
-  Serial.println();
-}
+
+
+
 
 /****************************************
  * Main Functions
@@ -404,10 +419,25 @@ void setup() {
 }
 
 void loop(){
- 
-  auxLoop();                                    // Loop all auxiliary utensils
-  //commLoop();                                   // Loop communication utensils
-  //serialPrints();                               // Run all desired prints
   
+  // millis() rollover check
+  if(millis() < millis_prev) millisRollover = true;
+  else millisRollover = false;
+
+  // Draw Ubidots connection symbol
+  if (master){
+    ubidots.loop();
+    if (ubidots.connected()) display.setUbi();
+    else {display.resetUbi(); ubidots.reconnect();}
+    display.refresh();
+  }
+
+  // Loops
+  auxLoop();                                    // Loop all auxiliary utensils
+  commLoop();                                   // Loop communication utensils
+  
+  millis_prev = millis();
+
+  espDelay(5000);
   
 }
