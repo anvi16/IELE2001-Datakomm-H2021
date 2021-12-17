@@ -19,10 +19,7 @@
 #include "PurpaceMadeLib/ClusterCom/ClusterCom.h"           // ClusterCom library for peer to peer communicatision
 #include "PurpaceMAdeLib/DisplayTTGO/DisplayTTGO.h"
                                         
-
-
 #define DEBUG
-
 
 volatile long buttonTimer = 0;                   // Variabel som lagrer tiden siden sist knappetrykk
 int sleepTimer = TIME_TO_SLEEP * mS_TO_S_FACTOR; // Tid i millisekunder til ESPen går i deep sleep modus
@@ -110,8 +107,18 @@ void ISRbuttonTimer()
   buttonTimer = millis();
 }
 
+// Functionaly the same as the "delay()" function.
+// However, instead of just waiting, the unit is put into light sleep to save power
+void espDelay(int ms)
+{
+  esp_sleep_enable_timer_wakeup(ms * 1000);
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+  esp_light_sleep_start();
+}
+
+
 /****************************************
-* Auxiliary Functions
+* UBIDOTS
 ****************************************/
 
 void UbisoftCallback(char *topic, byte *payload, unsigned int length)
@@ -132,17 +139,6 @@ void UbisoftCallback(char *topic, byte *payload, unsigned int length)
   // }
   Serial.println();
 }
-
-
-// Functionaly the same as the "delay()" function.
-// However, instead of just waiing, the unit is put into light sleep to save power
-void espDelay(int ms)
-{
-  esp_sleep_enable_timer_wakeup(ms * 1000);
-  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
-  esp_light_sleep_start();
-}
-
 
 void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, float alt, int batt){
 
@@ -177,7 +173,15 @@ void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, f
 }
 
 
+//////////////////////////////////////////////////////
+//                                                  //
+//                 GROUP FUNCTIONS                  //
+//                                                  //
+//////////////////////////////////////////////////////
 
+/****************************************
+ * AUX
+****************************************/
 
 void auxLoop()
 {
@@ -199,6 +203,10 @@ void auxLoop()
 
 }
 
+
+/****************************************
+ * COMMUNICATION
+****************************************/
 
 void commLoop(){
 
@@ -288,23 +296,16 @@ void commLoop(){
 }
 
 
+//////////////////////////////////////////////////////
+//                                                  //
+//                    MAIN LOOPS                    //
+//                                                  //
+//////////////////////////////////////////////////////
 
 
 /****************************************
- * Main Functions
+ * SETUP
 ****************************************/
-
-
-
-
-
-
-
-//////////////////////////////////////////////////////
-//                                                  //
-//                       SETUP                      //
-//                                                  //
-//////////////////////////////////////////////////////
 void setup() {
   
   // Start serial communication with microcontroller
@@ -464,6 +465,10 @@ void setup() {
 
 }
 
+
+/****************************************
+ * MAIN
+****************************************/
 void loop(){
   
   // millis() rollover check
