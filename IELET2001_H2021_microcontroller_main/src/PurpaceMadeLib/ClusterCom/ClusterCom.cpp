@@ -118,7 +118,7 @@ bool ClusterCom::available(uint8_t* mt, String* msgStr, float* msgFloat, uint8_t
 
     if (manager.available())
     {
-        // Wait for a message addressed to client
+        // Check for message addressed to client
         if (manager.recvfromAck(_buf, &len, &from))
         {
 			#ifdef DEBUG
@@ -135,6 +135,31 @@ bool ClusterCom::available(uint8_t* mt, String* msgStr, float* msgFloat, uint8_t
     }
     return false;
 }
+
+
+
+bool ClusterCom::available(uint8_t* mt, String* msgStr, float* msgFloat, uint8_t* id, uint16_t wait)
+{
+    uint8_t from;
+    uint8_t len = sizeof(_buf);
+
+    // Wait for a message addressed to client
+    if (manager.recvfromAckTimeout(_buf, &len, wait, &from))
+    {
+        #ifdef DEBUG
+            Serial.print("got request from : 0x");
+            Serial.print(from, HEX);
+            Serial.print(": ");
+            Serial.println((char*)_buf);
+        #endif
+        
+        id = &from;
+        readRecivedData(mt, msgStr, msgFloat);
+        return true;
+    }
+    return false;
+}
+
 
 
 bool ClusterCom::reciveId(String mac)

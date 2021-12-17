@@ -110,6 +110,11 @@ void GPS::refresh(bool syncDateTime = HIGH){
 
     _gpsDataAvailable = LOW;
 
+    bool _dateOk    = false;                    // Date read OK
+    bool _timeOK    = false;                    // Time read OK
+    bool _posOk     = false;                    // Position OK
+    bool _altOk     = false;                    // Altitude read
+
 
     refreshStartTS = millis();                  // Set timestamp for function call
     
@@ -150,6 +155,7 @@ void GPS::refresh(bool syncDateTime = HIGH){
         #ifdef DEBUG 
             Serial.println("Update successful: Location");
         #endif
+        _posOk = true;
     }
         
     else {
@@ -169,7 +175,8 @@ void GPS::refresh(bool syncDateTime = HIGH){
         // Save fetched values in temporary variables
         _yyyy =  gps_unit.date.year();           // Fetch year from satellite
         _mm =    gps_unit.date.month();          // Fetch month from satellite
-        _dd =    gps_unit.date.day();            // Fetch day of month from satellite    
+        _dd =    gps_unit.date.day();            // Fetch day of month from satellite
+        _dateOk = true;    
     }
 
     
@@ -179,7 +186,9 @@ void GPS::refresh(bool syncDateTime = HIGH){
         // Save fetched values in temporary variables
         _hour   =   gps_unit.time.hour();       // Fetch hour from satellite
         _min    =   gps_unit.time.minute();     // Fetch minute from satellite
-        _sec    =   gps_unit.time.second();     // Fetch second from satellite      
+        _sec    =   gps_unit.time.second();     // Fetch second from satellite 
+
+        _timeOK = true;     
     }
 
 

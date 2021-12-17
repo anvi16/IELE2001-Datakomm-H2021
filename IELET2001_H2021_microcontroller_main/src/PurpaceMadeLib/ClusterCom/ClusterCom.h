@@ -60,6 +60,7 @@ class ClusterCom {
 	bool send(const char* msg, uint8_t receiver = 1, MT mt = DATA, uint8_t id = 0);
 	bool send(float msg, uint8_t receiver = 1, MT mt = DATA, uint8_t id = 0);
 	bool available(uint8_t *mt, String *msgStr, float *msgFloat, uint8_t* id);
+	bool available(uint8_t* mt, String* msgStr, float* msgFloat, uint8_t* id, uint16_t wait);
 	bool getId();
 	void setId(uint8_t id, bool storeInEeprom = false);
 	void enable();

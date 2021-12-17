@@ -3,7 +3,8 @@
 
 #include <Arduino.h>
 
-// Uncomment to enable debug in program
+#define uS_TO_S_FACTOR 1000000 /* C onversion factor for micro seconds to seconds */
+#define mS_TO_S_FACTOR 1000
 
 
 //////////////////////////////////////////////////////
@@ -43,10 +44,19 @@ const int batteryPin =      36;
 #define EEPROM_SIZE 400
 #define SIZE_OF_MAC 18
 
+#define CONFIG_STATE 2
+enum CONFIG : uint8_t
+{
+    NOT     = 255,
+    MASTER  = 1,
+    SLAVE   = 2
+};
+
 #define NUMB_OF_SLAVES_ADDRESS 10
 #define ID_EEPROME_ADDRESS 100
 #define MASTER_ID_EEPROME_ADDRESS 101
 #define MAC_ADDRESS_SLAVE_START 200
+
 
 
 //////////////////////////////////////////////////////
@@ -61,6 +71,18 @@ static const uint32_t serialBaud = 9600;
 // GPS
 static const uint32_t GPSBaud = 9600;
 
+
+
+
+//////////////////////////////////////////////////////
+//                                                  //
+//                      SETUP                       //
+//                                                  //
+//////////////////////////////////////////////////////
+
+
+// Milliseconds given to user when selecting master/slave
+int selTime = 30 * mS_TO_S_FACTOR;
 
 //////////////////////////////////////////////////////
 //                                                  //
@@ -109,8 +131,7 @@ const char *WIFI_PASS = "ClusterNet";                                   // WiFi 
 //                                                  //
 //////////////////////////////////////////////////////
 
-#define uS_TO_S_FACTOR 1000000 /* C onversion factor for micro seconds to seconds */
-#define mS_TO_S_FACTOR 1000
-#define TIME_TO_SLEEP 6000       /* Time ESP32 will go to sleep (in seconds) */
-#define TIME_TO_SLEEP_CHECK 6000 // How often to check if the contitions for sleep mode are met
+
+#define TIME_TO_SLEEP 30       // Time ESP32 will sleep for (in seconds)
+#define TIME_TO_SLEEP_CHECK 600 // How often to check if the contitions for sleep mode are met
 

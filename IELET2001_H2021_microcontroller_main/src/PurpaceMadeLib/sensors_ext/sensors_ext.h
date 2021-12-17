@@ -208,6 +208,20 @@ struct WeatherData{
 
 };
 
+
+enum DATA : uint8_t
+{
+    TEMP    = 0,
+    HUM     = 1,
+    PRESS   = 2,
+    LAT     = 3,
+    LNG     = 4,
+    ALT     = 5,
+    BATPERC = 6,
+    BATVOLT = 7
+};
+
+
 class PlantSurveilance{
 
     private:
