@@ -214,13 +214,13 @@ void commLoop(){
     }
   }
 
-  // Recive incomming messages from RF module
+  // Recive incoming messages from RF module
   if(CCom.available(&mt, &msgStr, &msgFloat, &from))
   {
     switch (mt)
     {
       case CCom.PING:
-
+        CCom.send(ubidotsId.c_str(), from, CCom.PING);    // Respond to ping with device mac address
         break;
       case CCom.ID:   // Respond on slave id request
         if(master)
@@ -230,7 +230,7 @@ void commLoop(){
             if(CCom.send(msgStr.c_str(), 0, CCom.ID, numbOfSlaves +2));                           // Address between 2-11
             {
               EEPROM.writeString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC * numbOfSlaves, msgStr);   // Store slave device mac address
-              EEPROM.write(numbOfSlaves++, NUMB_OF_SLAVES_ADDRESS);                               // Store number of slaved addressed
+              EEPROM.write(numbOfSlaves++, NUMB_OF_SLAVES_ADDRESS);                               // Store number of slaves addressed
               //EEPROM.commit();
             }
           }else{
@@ -242,7 +242,7 @@ void commLoop(){
          
         break;
       case CCom.ERROR:    // Handel error that har occured on slave devices
-           
+                          // develop in next version   
         break;
       case CCom.DATA:     // Handel data from slave device 
           
@@ -258,8 +258,9 @@ void commLoop(){
           }
         break;
       default:            // Unknown massege type
-
+        CCom.send("Unsupported mt", from, CCom.ERROR);
     }
+
     mt       = 0;
     msgStr.clear();
     msgFloat = 0;
