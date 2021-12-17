@@ -76,6 +76,9 @@ Button S2(btnS2, true);
 String ubidotsId;
 String callbackPayload = "";
 
+// Sensors_ext
+bool dataIsReady = false;
+
 // ClusterCom
 //uint8_t id = 255;         // Device id / Default = 255
 uint8_t mt;                 // Buffer for messageType
@@ -267,7 +270,7 @@ void commLoop(){
     from     = 255;
   }
 
-  if(!master) // && dataIsReady)   // Push data to master
+  if(!master && dataIsReady)   // Push data to master
   {
     ws.getTempC();
     ws.getHum();
@@ -278,6 +281,8 @@ void commLoop(){
     unit.getBatteryPercent();
 
     //CCom.send();
+
+    // Go to sleep
   }
 
 }
