@@ -181,6 +181,23 @@ void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, f
   // ubiPubTS = millis();
 }
 
+bool ubiPubSlaveData(String slaveID, float* slaveData){
+// Publish data fethed from slave unit
+  if (ubidots.connected() && (millisRollover || ((millis() - ubiPubTS) > ubiPubFreq))){
+    ubiPubWeather(  slaveID,
+                    slaveData[TEMP    ],  // Temp
+                    slaveData[HUM     ],  // Hum
+                    slaveData[PRESS   ],  // Press
+                    slaveData[LAT     ],  // Latitude
+                    slaveData[LNG     ],  // Longitude
+                    slaveData[ALT     ],  // Altitude
+                    slaveData[BATPERC ]); // Battery Percent
+    ubiPubTS = millis();
+    return true;
+  }
+  return false;
+}
+
 
 //////////////////////////////////////////////////////
 //                                                  //
@@ -240,15 +257,13 @@ bool getSlaveData(uint8_t slaveUnit, float* slaveData){
   uint16_t wait = 500;  // 0.5sec
   uint8_t  i    = 0;
 
-  
-
   String dataName[] = {"temp", "hum", "press", "lat", "lng", "alt", "batperc"};
   
   // -- Get slave data
   for(String name : dataName)
   {
     err = CCom.send(name.c_str(), slaveUnit+2, CCom.DATA) ? !CCom.available(&mt, &msgStr, &msgFloat, &from, wait) : true;   // Send and wait for response for a desired amount of time
-    if(err) break; 
+    if(err) {err = true; break;} 
     
     if(mt == CCom.DATA && from == slaveUnit+2)    // Check desired data is resived and store to array
       slaveData[i++] = msgFloat;
@@ -645,72 +660,62 @@ void loop(){
 
   // Master communication behaviour
   if(master){
-  // Lisen for incoming data
-    commLoop();
+
+    // Lisen for incoming data
+    // -- Scan local area for new slaves
+      commLoop();
 
 
+  /* // Fetch data from slave units
+    -- Request data from the given slave number
+    -- Wait for data from the given slave
+    -- If no data recieved, stash unit number in an array, 
+    -- to request again at the end of the original list
+    -- Push data to the cloud
+  */
+    bool resivedData[numbOfSlaves] = {1};
 
-  
+    for (int slaveUnit = 0; slaveUnit < numbOfSlaves; slaveUnit++){
 
-  // Fetch data from slave units
-  bool resivedData[numbOfSlaves] = {1};
+      String slaveID = EEPROM.readString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC *slaveUnit);
 
-  for (int slaveUnit = 0; slaveUnit < numbOfSlaves; slaveUnit++){
+      if(slaveID == "FF:FF:FF:FF:FF:FF") continue;    // Skip unit if it is deleated
 
-    String slaveID = EEPROM.readString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC *slaveUnit);
-
-    // Temp[0] Hum[1] Press[2] Lat[3] Lng[4] Alt[5] BatteryPercent[6]
-    float slaveData[7];
-  
-    // If error, store id for a second attempt
-    if(!getSlaveData(slaveUnit, slaveData)) 
-    {
-      resivedData[slaveUnit] = false;
-      continue;
-    }  
-
-    // Publish data fethed from slave unit
-    if (ubidots.connected() && (millisRollover || ((millis() - ubiPubTS) > ubiPubFreq))){
-      ubiPubWeather(  slaveID,
-                      slaveData[TEMP    ],  // Temp
-                      slaveData[HUM     ],  // Hum
-                      slaveData[PRESS   ],  // Press
-                      slaveData[LAT     ],  // Latitude
-                      slaveData[LNG     ],  // Longitude
-                      slaveData[ALT     ],  // Altitude
-                      slaveData[BATPERC ]); // Battery Percent
-    ubiPubTS = millis();
+      // Temp[0] Hum[1] Press[2] Lat[3] Lng[4] Alt[5] BatteryPercent[6]
+      float slaveData[7];
+    
+      // If error, store id for a second attempt
+      if(!getSlaveData(slaveUnit, slaveData)) { resivedData[slaveUnit] = false; continue; }  
+      if(!ubiPubSlaveData(slaveID, slaveData)) Serial.println("ERROR: can not publish to Ubidots");
     }
 
-  }
 
-  for(bool state : resivedData)
-  {
-    if(state) continue;
-          
-  }
+    // Do a secound attempt to get data from slave units
+    uint8_t slaveUnit = 0;
 
+    for(bool state : resivedData)
+    {
+      slaveUnit++;
+      if(state) continue;   // Move on to next devise
 
-      // -- Request data from the given slave number
+      String slaveID = EEPROM.readString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC *slaveUnit);
 
-      // -- Wait for data from the given slave
+      // Temp[0] Hum[1] Press[2] Lat[3] Lng[4] Alt[5] BatteryPercent[6]
+      float slaveData[7];
 
-      // -- If no data recieved, stash unit number in an array, 
-      // -- to request again at the end of the original list
+      if(!getSlaveData(slaveUnit, slaveData)) continue;
+      if(!ubiPubSlaveData(slaveID, slaveData)) Serial.println("ERROR: can not publish to Ubidots");    
 
-    
-    
-
-    // -- Scan local area for new slaves 
-
-    
+      resivedData[slaveUnit] = true;
+    }
   }
 
 
   // SLAVE CONFIGURATION
   else {
 
-  
+    // Lisen for incoming data
+      commLoop();
     
     
     
