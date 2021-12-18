@@ -18,6 +18,7 @@ class DisplayTTGO{
 
         bool master;
         bool ubi;
+        bool enabled;
         int batteryPercent;
         float batteryVoltage;
 
@@ -58,6 +59,12 @@ class DisplayTTGO{
 
         // Refresh function to update all elements on screen. Call each scan
         void refresh();
+        
+        // Enable display 
+        void enable();
+
+        // Shut down display
+        void disable();
 
         // Update battery stats
         void setBatteryState(int percent, float volt);

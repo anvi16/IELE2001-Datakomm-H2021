@@ -534,6 +534,9 @@ bool RH_INTERRUPT_ATTR RH_ASK::recv(uint8_t* buf, uint8_t* len)
 // Caution: this may block
 bool RH_ASK::send(const uint8_t* data, uint8_t len)
 {
+    /* Serial.print("flag src tx 1: ");
+    Serial.println(_txHeaderFlags); */
+
     uint8_t i;
     uint16_t index = 0;
     uint16_t crc = 0xffff;

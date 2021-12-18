@@ -96,6 +96,16 @@ bool RHReliableDatagram::sendtoWait(uint8_t* buf, uint8_t len, uint8_t address)
 		uint8_t from, to, id, flags;
 		if (recvfrom(0, 0, &from, &to, &id, &flags)) // Discards the message
 		{
+			/* Serial.print("Flag rx: ");
+			Serial.println(flags);
+
+			Serial.print("session rx: ");
+			Serial.print(" id: ");
+			Serial.print(id);
+			Serial.print(",  thisSequenceNumber: ");
+			Serial.print(thisSequenceNumber);
+			Serial.print(", seenid: ");
+			Serial.println(_seenIds[from]); */
 		    // Now have a message: is it our ACK?
 		    if (   from == address 
 			   && to == _thisAddress 
@@ -108,7 +118,7 @@ bool RHReliableDatagram::sendtoWait(uint8_t* buf, uint8_t len, uint8_t address)
 		    else if (   !(flags & RH_FLAGS_ACK)
 				&& (id == _seenIds[from]))
 		    {
-			// This is a request we have already received. ACK it again
+			delay(10);			// This is a request we have already received. ACK it again
 			acknowledge(id, from);
 		    }
 		    // Else discard it
@@ -134,15 +144,24 @@ bool RHReliableDatagram::recvfromAck(uint8_t* buf, uint8_t* len, uint8_t* from, 
     // Get the message before its clobbered by the ACK (shared rx and tx buffer in some drivers
     if (available() && recvfrom(buf, len, &_from, &_to, &_id, &_flags))
     {
+	/* Serial.print("Flag rx msg: ");
+	Serial.println(_flags);
+
+	Serial.print("session rx: ");
+	Serial.print(" id: ");
+	Serial.print(_id);
+	Serial.print(", seenid: ");
+	Serial.println(_seenIds[_from]); */
 	// Never ACK an ACK
 	if (!(_flags & RH_FLAGS_ACK))
 	{
 	    // Its a normal message not an ACK
 	    if (_to ==_thisAddress)
 	    {
-	        // Its for this node and
+			// Its for this node and
 		// Its not a broadcast, so ACK it
 		// Acknowledge message with ACK set in flags and ID set to received ID
+		delay(10);
 		acknowledge(_id, _from);
 	    }
             // Filter out retried messages that we have seen before. This explicitly

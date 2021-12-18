@@ -8,14 +8,10 @@ tft(135, 240)
 {   
     _pinBL = pinBL; // Backlight pin
 
-    tft.init();
-    tft.fillScreen(TFT_BLACK);
-    tft.setRotation(0);
-    tft.setTextSize(1);
-    tft.setTextColor(TFT_WHITE);
-
+    enabled = false;                // Init
     master = false;                 // Init
     ubi = false;                    // Init
+    displayNumber = 0;
 
     min_prev = 59;                  // Init
     batteryPercent = 50;            // Init
@@ -52,39 +48,59 @@ void DisplayTTGO::selectMessageScreen(){            // 2
 }
 
 
+void DisplayTTGO::enable(){
+    if (!enabled){
+        enabled = true;
+        tft.init();
+        tft.fillScreen(TFT_BLACK);
+        tft.setRotation(0);
+        tft.setTextSize(1);
+        tft.setTextColor(TFT_WHITE);
+        refresh();
+    }
+}
+void DisplayTTGO::disable(){
+    enabled = false;
+    selectBlackScreen();
+    refresh();
+}
+
 void DisplayTTGO::refresh(){
 
-    // Turn display backlight ON if BlackScreen has previously been displayed
-    if ((displayNumber_prev == 0) && (displayNumber != 0)){
-        digitalWrite(_pinBL, HIGH);
-    }
+    if (enabled){
+
+        // Turn display backlight ON if BlackScreen has previously been displayed
+        if ((displayNumber_prev == 0) && (displayNumber != 0)){
+            digitalWrite(_pinBL, HIGH);
+        }
     
-    // Wipe display when togling between screens 
-    if(displayNumber != displayNumber_prev){
-        tft.fillRect(1,18,133,220,TFT_BLACK);
-    } 
+        // Wipe display when togling between screens 
+        if(displayNumber != displayNumber_prev){
+            tft.fillRect(1,18,133,220,TFT_BLACK);
+        } 
 
-    // Check if minute has been updated since last scan
-    if (minute() != min_prev){
-        drawTime();
-        tft.drawLine(2, 17, 133, 17, TFT_WHITE);
-    }
+        // Check if minute has been updated since last scan
+        if (minute() != min_prev){
+            drawTime();
+            tft.drawLine(2, 17, 133, 17, TFT_WHITE);
+        }
 
-    // Refresh battery status
-    if (batteryPercent != batteryPercent_prev){
-        drawBatteryState(batteryPercent);
-    }
+        // Refresh battery status
+        if (batteryPercent != batteryPercent_prev){
+            drawBatteryState(batteryPercent);
+        }
 
-    // Show "Master" symbol
-    if (master)drawMaster();
+        // Show "Master" symbol
+        if (master)drawMaster();
     
-    // Show / clear "Ubidots" symbol
-    if (ubi) drawUbi();
-    else tft.fillRoundRect(60, 1, 12, 13, 1, TFT_BLACK);
+        // Show / clear "Ubidots" symbol
+        if (ubi) drawUbi();
+        else tft.fillRoundRect(60, 1, 12, 13, 1, TFT_BLACK);
 
 
-    tft.drawRoundRect(110,4,24,10,1,TFT_WHITE);
-    tft.fillRect(108,6,2,6,TFT_WHITE);
+        tft.drawRoundRect(110,4,24,10,1,TFT_WHITE);
+        tft.fillRect(108,6,2,6,TFT_WHITE);
+    }
 
     /****************************************
     * Define different screen specs
@@ -95,84 +111,86 @@ void DisplayTTGO::refresh(){
         digitalWrite(_pinBL, LOW);                  // Turn off backlight on display
     }
 
-    // Lock Screen
-    else if (displayNumber == 1){                   // Lock Screen
-        
-        tft.setTextColor(TFT_WHITE);
-        tft.setTextSize(1);
-        
-        // WEATHER
-        tft.drawCentreString("Weather",67, 30,  4);
-        
-        // Text
-        tft.drawCentreString("T"    , 23, 60, 2);
-        tft.drawCentreString("Hum"  , 67, 60, 2);
-        tft.drawCentreString("P"    , 111,60, 2);
+    if (enabled){
+        // Lock Screen
+        if (displayNumber == 1){                   // Lock Screen
+            
+            tft.setTextColor(TFT_WHITE);
+            tft.setTextSize(1);
+            
+            // WEATHER
+            tft.drawCentreString("Weather",67, 30,  4);
+            
+            // Text
+            tft.drawCentreString("T"    , 23, 60, 2);
+            tft.drawCentreString("Hum"  , 67, 60, 2);
+            tft.drawCentreString("P"    , 111,60, 2);
 
-        // If no data is available, print "?"
-        if((lockScreenData[0] == 0.0) && (lockScreenData[1] == 0.0) && (lockScreenData[2] == 0.0)){
-            tft.fillRect(1,80,133,18,TFT_BLACK);                            // Clear relevant part of screen
-            tft.drawCentreString("?", 23, 80, 2); // Print temperature to monitor
-            tft.drawCentreString("?", 67, 80, 2); // Print humidity to monitor
-            tft.drawCentreString("?", 111,80, 2); // Print pressure to monitor
-        }
-        // Redraw dynamic field if changes have been made
-        else if (   (lockScreenData[0] != lockScreenData_prev[0]) ||                // If either temp, hum or press has ben updated 
-                    (lockScreenData[1] != lockScreenData_prev[1]) ||
-                    (lockScreenData[2] != lockScreenData_prev[2])){
-            tft.fillRect(1,80,133,18,TFT_BLACK);                            // Clear relevant part of screen
-            tft.drawCentreString(String(lockScreenData[0],1),   23, 80, 2); // Print temperature to monitor
-            tft.drawCentreString(String(lockScreenData[1],1),   67, 80, 2); // Print humidity to monitor
-            tft.drawCentreString(String(lockScreenData[2],1),   111,80, 2); // Print pressure to monitor
-        }
-        
-        // Format latitude and longitude in a string
-        char gpsData[30] = "";
-        sprintf(gpsData, "%.3fN, %.3fE", lockScreenData[3], lockScreenData[4]);
-        
-        // POSITION
-        tft.drawCentreString("Position", 67, 140,  4);
-        
-        // Coordinates
-        tft.drawCentreString("Coordinates:", 67, 170, 1);
-        if((lockScreenData[3] == 0.000) && (lockScreenData[4] == 0.000) && (displayNumber != displayNumber_prev)){ // If null island, print error
-            tft.fillRect(1,180,133,18,TFT_BLACK);                           // Clear relevant part of screen
-            tft.drawCentreString("No GPS data", 67, 180, 2);
-        }
-        else if ((lockScreenData[3] != lockScreenData_prev[3]) ||           // If either lat or lng has been updated
-            (lockScreenData[4] != lockScreenData_prev[4])){
-            tft.fillRect(1,180,133,18,TFT_BLACK);                           // Clear relevant part of screen
-            tft.drawCentreString(gpsData, 67, 180, 2);                      // Print position on monitor
-        }
-        
+            // If no data is available, print "?"
+            if((lockScreenData[0] == 0.0) && (lockScreenData[1] == 0.0) && (lockScreenData[2] == 0.0)){
+                tft.fillRect(1,80,133,18,TFT_BLACK);                            // Clear relevant part of screen
+                tft.drawCentreString("?", 23, 80, 2); // Print temperature to monitor
+                tft.drawCentreString("?", 67, 80, 2); // Print humidity to monitor
+                tft.drawCentreString("?", 111,80, 2); // Print pressure to monitor
+            }
+            // Redraw dynamic field if changes have been made
+            else if (   (lockScreenData[0] != lockScreenData_prev[0]) ||                // If either temp, hum or press has ben updated 
+                        (lockScreenData[1] != lockScreenData_prev[1]) ||
+                        (lockScreenData[2] != lockScreenData_prev[2])){
+                tft.fillRect(1,80,133,18,TFT_BLACK);                            // Clear relevant part of screen
+                tft.drawCentreString(String(lockScreenData[0],1),   23, 80, 2); // Print temperature to monitor
+                tft.drawCentreString(String(lockScreenData[1],1),   67, 80, 2); // Print humidity to monitor
+                tft.drawCentreString(String(lockScreenData[2],1),   111,80, 2); // Print pressure to monitor
+            }
+            
+            // Format latitude and longitude in a string
+            char gpsData[30] = "";
+            sprintf(gpsData, "%.3fN, %.3fE", lockScreenData[3], lockScreenData[4]);
+            
+            // POSITION
+            tft.drawCentreString("Position", 67, 140,  4);
+            
+            // Coordinates
+            tft.drawCentreString("Coordinates:", 67, 170, 1);
+            if((lockScreenData[3] == 0.000) && (lockScreenData[4] == 0.000) && (displayNumber != displayNumber_prev)){ // If null island, print error
+                tft.fillRect(1,180,133,18,TFT_BLACK);                           // Clear relevant part of screen
+                tft.drawCentreString("No GPS data", 67, 180, 2);
+            }
+            else if ((lockScreenData[3] != lockScreenData_prev[3]) ||           // If either lat or lng has been updated
+                (lockScreenData[4] != lockScreenData_prev[4])){
+                tft.fillRect(1,180,133,18,TFT_BLACK);                           // Clear relevant part of screen
+                tft.drawCentreString(gpsData, 67, 180, 2);                      // Print position on monitor
+            }
+            
 
-        // Altitude
-        tft.drawCentreString("Altitude [m.a.s]:", 67, 210, 1);
-        if((lockScreenData[5] == 0.00000) && (displayNumber != displayNumber_prev)){    // If null values, print error 
-            tft.fillRect(1,220,133,18,TFT_BLACK);                           // Clear relevant part of screen
-            tft.drawCentreString("No GPS data", 67, 220, 2);
-        }
-        else if (lockScreenData[5] != lockScreenData_prev[5]){              // If alt has been updated
-            tft.fillRect(1,220,133,18,TFT_BLACK);                           // Clear relevant part of screen
-            tft.drawCentreString(String(lockScreenData[5],1), 67, 220, 2);  // Print altitude on monitor
-        }
+            // Altitude
+            tft.drawCentreString("Altitude [m.a.s]:", 67, 210, 1);
+            if((lockScreenData[5] == 0.00000) && (displayNumber != displayNumber_prev)){    // If null values, print error 
+                tft.fillRect(1,220,133,18,TFT_BLACK);                           // Clear relevant part of screen
+                tft.drawCentreString("No GPS data", 67, 220, 2);
+            }
+            else if (lockScreenData[5] != lockScreenData_prev[5]){              // If alt has been updated
+                tft.fillRect(1,220,133,18,TFT_BLACK);                           // Clear relevant part of screen
+                tft.drawCentreString(String(lockScreenData[5],1), 67, 220, 2);  // Print altitude on monitor
+            }
 
 
-        // Comparator for next scan
-        for (int i = 0; i<6; i++){
-            lockScreenData_prev[i] = lockScreenData[i];
+            // Comparator for next scan
+            for (int i = 0; i<6; i++){
+                lockScreenData_prev[i] = lockScreenData[i];
+            }
         }
+        
+        // Message screen
+        else if (displayNumber == 2){                               // Generic message screen
+            drawMessageScreenStrings();
+        }
+
+        // Reset compare for next scan
+        min_prev = minute(); 
+        displayNumber_prev = displayNumber;
+        batteryPercent_prev = batteryPercent;
     }
-    
-    // Message screen
-    else if (displayNumber == 2){                               // Generic message screen
-        drawMessageScreenStrings();
-    }
-
-    // Reset compare for next scan
-    min_prev = minute(); 
-    displayNumber_prev = displayNumber;
-    batteryPercent_prev = batteryPercent;
 
 }
 void DisplayTTGO::setBatteryState(int percent, float volt){

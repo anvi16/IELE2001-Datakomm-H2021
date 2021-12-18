@@ -22,18 +22,20 @@
 #define DEBUG
 #define TEST
 
-volatile long buttonTimer = 0;                   // Variabel som lagrer tiden siden sist knappetrykk
-int sleepTimer = TIME_TO_SLEEP_CHECK * mS_TO_S_FACTOR; // Tid i millisekunder til ESPen går i deep sleep modus
+volatile unsigned long   buttonTS = 0;                              // Variabel som lagrer tiden siden sist knappetrykk
+volatile bool   buttonPress;                                  // Woken by button
+bool            timerWakeup = false;
+int             awakeTime = TIME_TO_SLEEP_CHECK * mS_TO_S_FACTOR;      // Awake time after button push
 
+esp_sleep_wakeup_cause_t wakeup_reason;
 hw_timer_t *hw_timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
 unsigned long millis_prev = 0;
-bool millisRollover = false;
+bool          millisRollover = false;
+int           hour_prev = 0;
+bool          hourChange = false;
 
-/**************************************** 
-* Instanciate objects
-****************************************/
 
 /**************************************** 
 * Instanciate objects
@@ -72,6 +74,7 @@ Button S2(btnS2, true);
 // Ubidots
 String ubidotsId;
 String callbackPayload = "";
+bool masterDataPublished;
 
 // Sensors_ext
 bool dataIsReady = false;
@@ -86,31 +89,37 @@ uint8_t mt;                 // Buffer for messageType
 String  msgStr;             // Buffer for incoming message
 float   msgFloat;
 uint8_t from;               // ID to sender of the incoming message
+bool    CComErr;
 
 uint8_t numbOfSlaves = 0;   // Remember how many slaves this master has addressed
+String  macSlave[ALLOWED_SLAVES];
 
 bool master = false;        // True if device is master
-
 unsigned long setupTime;    // Get time after setup
+
+bool retryFetchSlaveData = true;  // Master is trying to fetch date from connected slaves
 
 
 /****************************************
 * Sleep Mode Functions
 ****************************************/
-
+/*
 void IRAM_ATTR onTimer()
 {
   portENTER_CRITICAL_ISR(&timerMux);
-  if (millis() - buttonTimer > sleepTimer)
+  
+  if ((millis() - buttonTimer > awakeTime))
   {
     esp_deep_sleep_start();
   }
   portEXIT_CRITICAL_ISR(&timerMux);
 }
+*/
 
-void ISRbuttonTimer()
+void IRAM_ATTR ISRbuttonTimer()
 {
-  buttonTimer = millis();
+  buttonTS = millis();
+  buttonPress = true;
 }
 
 // Functionaly the same as the "delay()" function.
@@ -127,6 +136,11 @@ unsigned long calcSleepTimeSec(){
   return ((59-minute()) * 60) + (60-second());
 }
 
+// Puts unit in deep sleep and sets wakeup timer to next full hour
+void goToDeepSleep(){
+  esp_sleep_enable_timer_wakeup(calcSleepTimeSec() * uS_TO_S_FACTOR);
+  esp_deep_sleep_start();
+}
 /****************************************
 * UBIDOTS
 ****************************************/
@@ -155,6 +169,7 @@ void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, f
   // Connection
   if (!ubidots.connected()){                  // Reconnect to ubidots if not connected
       ubidots.reconnect();
+      ubidots.loop();
       Serial.println("Reconnecting to ubi");
   }
   
@@ -176,25 +191,28 @@ void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, f
   if ((lat!= 0.0) && (lng != 0))  ubidots.add("gps",                1,      gpsData );  // Generate / update GPS variable in Ubidots
 
   ubidots.publish(id.c_str());                       // Publish buffer to Ubidots
+  Serial.print("Unit ID data pub UBI: ");
+  Serial.println(id);
   ubidots.loop();
 
   // ubidots.subscribe("/v2.0/devices/3/temperature/lv");
   // ubiPubTS = millis();
 }
 
-bool ubiPubSlaveData(String slaveID, float* slaveData){
+bool ubiPubData(String ID, float* Data){
 // Publish data fethed from slave unit
   if (ubidots.connected() && (millisRollover || ((millis() - ubiPubTS) > ubiPubFreq))){
-    ubiPubWeather(  slaveID,
-                    slaveData[TEMP    ],  // Temp
-                    slaveData[HUM     ],  // Hum
-                    slaveData[PRESS   ],  // Press
-                    slaveData[LAT     ],  // Latitude
-                    slaveData[LNG     ],  // Longitude
-                    slaveData[ALT     ],  // Altitude
-                    slaveData[BATPERC ]); // Battery Percent
+    ubiPubWeather(  ID,
+                    Data[TEMP    ],  // Temp
+                    Data[HUM     ],  // Hum
+                    Data[PRESS   ],  // Press
+                    Data[LAT     ],  // Latitude
+                    Data[LNG     ],  // Longitude
+                    Data[ALT     ],  // Altitude
+                    Data[BATPERC ]); // Battery Percent
     ubiPubTS = millis();
     Serial.println("Data published to ubi");
+    Serial.println(Data[BATPERC]);
     return true;
   }
   return false;
@@ -280,7 +298,7 @@ void displayLoop(){
 bool getSlaveData(uint8_t slaveUnit, float* slaveData){
 
   bool     err  = false;
-  uint16_t wait = 4000;  // 4sec
+  uint16_t wait = 1000;  // 1sec
   uint8_t  i    = 0;
 
   String dataName[] = {"temp", "hum", "press", "lat", "lng", "alt", "batperc"};
@@ -320,10 +338,10 @@ void commLoop(){
   // Recive incoming messages from RF module
   if(CCom.available(&mt, &msgStr, &msgFloat, &from))
   {
-    Serial.println(mt);
-    if(msgStr)   Serial.println(msgStr);
-    if(msgFloat) Serial.println(msgFloat);
-    Serial.println(from);
+    //Serial.println(mt);
+    //if(msgStr)   Serial.println(msgStr);
+    //if(msgFloat) Serial.println(msgFloat);
+    //Serial.println(from);
 
     switch (mt)
     {
@@ -340,6 +358,7 @@ void commLoop(){
           {
             if(CCom.send(msgStr.c_str(), 0, CCom.ID, ++numbOfSlaves +1))    // Address from 2
             {
+              macSlave[numbOfSlaves-1] = msgStr;
               EEPROM.writeString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC * numbOfSlaves-1, msgStr);   // Store slave device mac address
               EEPROM.write(numbOfSlaves, NUMB_OF_SLAVES_ADDRESS);                                   // Store number of slaves addressed
               //EEPROM.commit();
@@ -350,11 +369,11 @@ void commLoop(){
           else if(from == 0) 
           {
             uint8_t i = 0;
-            while(EEPROM.readString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC *(i++ -2)) != "FF:FF:FF:FF:FF:FF")   // Check if device is deleted
+            while(macSlave[i++] != "FF:FF:FF:FF:FF:FF")   // Check if device is deleted
               if(i >= ALLOWED_SLAVES) break;     
             if(i < ALLOWED_SLAVES) 
             {
-              if(CCom.send(msgStr.c_str(), 0, CCom.ID, (i-1) +2))                            // Address from 2
+              if(CCom.send(msgStr.c_str(), 0, CCom.ID, i+1))                            // Address from 2
               {
                 EEPROM.writeString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC * (i-1), msgStr);   // Store slave device mac address
                 //EEPROM.commit();
@@ -379,9 +398,7 @@ void commLoop(){
       case CCom.SLEEP:                                       // Go to sleep
 
         // Set timer to wake unit next full hour
-        esp_sleep_enable_timer_wakeup(calcSleepTimeSec() * mS_TO_S_FACTOR);
-        esp_deep_sleep_start();
-
+        goToDeepSleep();
         break;
 
 
@@ -401,7 +418,7 @@ void commLoop(){
 
           if(from > 1 && from < ALLOWED_SLAVES+2)    // 1 < from < allowedSlaves, is a valid slave id
           {
-            String currentSlaveMac = EEPROM.readString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC *(from -2));
+            String currentSlaveMac = macSlave[from -2];
             // Handle data...
           }
         }
@@ -416,7 +433,7 @@ void commLoop(){
             else if(msgStr == "lng"    ) CCom.send(sensorData[LNG    ], from, CCom.DATA);
             else if(msgStr == "alt"    ) CCom.send(sensorData[ALT    ], from, CCom.DATA);
             else if(msgStr == "batperc") CCom.send(sensorData[BATPERC], from, CCom.DATA);
-            else  CCom.send("Doesn't provide this data", from, CCom.ERROR);
+            else  CCom.send("Doesn't support this data", from, CCom.ERROR);
           }
           else CCom.send("Data not ready", from, CCom.ERROR);
         }          
@@ -440,8 +457,7 @@ void commLoop(){
 
     //CCom.send();
 
-    // Time to sleep
-    //esp_deep_sleep_start();    // Go to sleep
+    // goToDeepSleep() ??
   }
 
 }
@@ -458,12 +474,60 @@ void commLoop(){
  * SETUP
 ****************************************/
 void setup() {
+  delay(1000);
+
+  EEPROM.begin(EEPROM_SIZE);
+
+  #ifdef WIPE_EEPROM
+    for (int i = 0; i < EEPROM_SIZE; i++) {
+      EEPROM.write(i, 255);
+    }
+    EEPROM.commit();
+    delay(500); 
+  #endif
   
+  // Enable hardware timer for wakeup
+  /*
+  hw_timer = timerBegin(3, 80, true);
+  timerAttachInterrupt(hw_timer, &onTimer, true);
+  timerAlarmWrite(hw_timer, 1000000, true);
+  timerAlarmEnable(hw_timer);
+  */
+
+  // Enable wakeup button
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_35, 0);
+
+  // Attach interrupt to button
+  attachInterrupt(btnS2, ISRbuttonTimer, FALLING);
+
+  // Reason for wakeup
+  wakeup_reason = esp_sleep_get_wakeup_cause();
+
+  switch (wakeup_reason){
+
+    case ESP_SLEEP_WAKEUP_EXT0:
+      Serial.println("Wakeup:Button");
+      timerWakeup = false;
+      buttonPress = true;
+      buttonTS = millis();
+      break;
+
+    case ESP_SLEEP_WAKEUP_TIMER:
+      Serial.println("Wakeup:Timer");
+      timerWakeup = true;
+      buttonPress = false;
+      break;
+  }
+
+  // Select if screen should be enabled based on how it is woken
+  if (timerWakeup)  display.disable();
+  else              display.enable();
+
   // Start serial communication with microcontroller
   Serial.begin(serialBaud);  
   delay(1000);
 
-  EEPROM.begin(EEPROM_SIZE);
+  
 
   // Button object begin to enable monitoring of 
   S2.begin();
@@ -535,7 +599,7 @@ void setup() {
   display.setBatteryState(unit.getBatteryPercent(), unit.getBatteryVoltage());
 
   ubidotsId = WiFi.macAddress();                // Read MAC to use as unit name in Ubidots
-  
+
   display.setString(0, "Startup");
   display.setString(2, "Unit configured");
   display.setString(5, "");
@@ -574,11 +638,17 @@ void setup() {
     CCom.setId(CCom.masterId, true);                        // Set device to master id
     if(EEPROM.read(NUMB_OF_SLAVES_ADDRESS) != 255) 
       numbOfSlaves = EEPROM.read(NUMB_OF_SLAVES_ADDRESS);   // Recall from storage
+    for(int slaveUnit=0; slaveUnit < numbOfSlaves; slaveUnit++)
+    {
+      macSlave[slaveUnit] = EEPROM.readString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC*slaveUnit);
+    }
 
     display.setString(5, "Configured!");
     display.setString(6, "");
     display.refresh();
     delay(1000);
+
+    masterDataPublished = false;
   }
 
 
@@ -600,9 +670,9 @@ void setup() {
     CCom.begin(UBIDOTS_TOKEN, EEPROM_SIZE, ID_EEPROME_ADDRESS);
     delay(100);
 
-    bool err = !CCom.getId();
+    CComErr = !CCom.getId();
 
-    if (err){
+    if (CComErr){
       Serial.println("Failed to obtain id");
       display.setString(5, "Failed to");
       display.setString(6, "obtain ID");
@@ -619,31 +689,11 @@ void setup() {
     }
   }
 
-  // Sleep configuration
-  hw_timer = timerBegin(3, 80, true);
-  timerAttachInterrupt(hw_timer, &onTimer, true);
-  timerAlarmWrite(hw_timer, 1000000, true);
-  timerAlarmEnable(hw_timer);
-  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-
-  attachInterrupt(btnS2, ISRbuttonTimer, FALLING);
-
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_35, 0);
-
-  esp_sleep_wakeup_cause_t wakeup_reason;
-  wakeup_reason = esp_sleep_get_wakeup_cause();
-  switch (wakeup_reason)
-  {
-  case ESP_SLEEP_WAKEUP_EXT0:
-    Serial.println("Wakeup:Button");
-    break;
-  case ESP_SLEEP_WAKEUP_TIMER:
-    Serial.println("Wakeup:Timer");
-    break;
-  }
-
   setupTime = millis();
 }
+
+
+
 
 
 /****************************************
@@ -651,14 +701,22 @@ void setup() {
 ****************************************/
 void loop(){
   
+  if (buttonPress) display.enable();
+
   // millis() rollover check
-  if(millis() < millis_prev) millisRollover = true;
-  else millisRollover = false;
+  if(millis() < millis_prev)  millisRollover = true;
+  else                        millisRollover = false;
+
+  // hour() change check. Do not set false if not, because it will be an indicator that an hour change has been ,ade during the process and that data shoiuld be transmitted
+  if(hour() != hour_prev) hourChange = true;
 
   // Update data from unit
-  dataIsReady = dataFetchLoop(hour()==12);    // Get gps data only when the hour says 12. Returns true when requested data is updated
+  dataIsReady = dataFetchLoop(false && hour()==12);    // Get gps data only when the hour says 12. Returns true when requested data is updated
+  
+  // Update display
   displayLoop();
 
+  /* 
   // If year is not updated, do not continue until GPS has updated time and date (To be able so sync units)
   if (year()<= 2020){
     int scan = 0;
@@ -689,108 +747,143 @@ void loop(){
 
     }
   }
+  */
 
-  // UBIDOTS - Check if connected and reconnect if not
-  if (master){
-    // Check if connection to Ubidots is valid
-    ubidots.loop();
-    if (!ubidots.connected()) ubidots.reconnect();
-  }
+  /*******************************************************
+  * Communicate data between units and publish to Ubidots
+  ********************************************************/
+  
+  // Is triggered either by periodical wakeuptimer or by an hour change if wakeup was triggered by button
+  if (true || timerWakeup || hourChange){
+    // Start gathering data and publish to ubidots
+ 
+    ////////////////////
+    //     MASTER     //
+    ////////////////////
 
-  // Master communication behaviour
-  if(master){
-
-    // Listen for incoming data
-    // Scan local area for new slaves
-    commLoop();
-    // ubiPubSlaveData(ubidotsId, sensorData);
-
-
-  uint16_t timeout = 10000; //10sec
-
-  if((millis() - setupTime) > timeout )   // Don't fetch data right after boot
-  {
-    /* // Fetch data from slave units
-      -- Request data from the given slave number
-      -- Wait for data from the given slave
-      -- If no data recieved, stash unit number in an array, 
-      -- to request again at the end of the original list
-      -- Push data to the cloud
-    */
-      bool resivedData[numbOfSlaves] = {1};
-      for (int slaveUnit = 0; slaveUnit < numbOfSlaves; slaveUnit++){
-
-        String slaveID = EEPROM.readString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC *slaveUnit);
-        if(slaveID == "FF:FF:FF:FF:FF:FF") continue;    // Skip unit if it is deleted
-
-        // Temp[0] Hum[1] Press[2] Lat[3] Lng[4] Alt[5] BatteryPercent[6]
-        float slaveData[7];
+    // Master communication behaviour
+    if(master){
       
-        // If error, store id for a second attempt
-        if(!getSlaveData(slaveUnit, slaveData)) { resivedData[slaveUnit] = false; continue; }  
+      // UBIDOTS - Check if connected and reconnect if not
+      ubidots.loop();
+      if (!ubidots.connected()) ubidots.reconnect();
 
-        unsigned long TS = millis();
-        while(!ubiPubSlaveData(slaveID, slaveData))
-        {
-          if((millis()-TS) > ubiPubFreq*2 > 0)
+      // Start communication Listen for incoming data
+      // Scan local area for new slaves
+      commLoop();
+
+      // Publish Master data if not allready done. Make 5 attempts with 1 second spacing
+      if (!masterDataPublished && dataIsReady){
+        for (int i = 0; i<5; i++){
+          if (masterDataPublished) break;
+          masterDataPublished = ubiPubData(ubidotsId, sensorData);
+          delay(1000);
+        }
+      } 
+
+      // Fetch data from slaves 
+      uint16_t timeout = 10000; //10sec
+
+      if((millis() - setupTime) > timeout && numbOfSlaves && retryFetchSlaveData){ 
+      // Don't fetch data right after boot,
+      // and check if any slaves are set up
+
+        /* // Fetch data from slave units
+          -- Request data from the given slave number
+          -- Wait for data from the given slave
+          -- If no data recieved, stash unit number in an array, 
+          -- to request again at the end of the original list
+          -- Push data to the cloud
+        */
+      
+        bool resivedData[numbOfSlaves] = {1};
+        for (int slaveUnit = 0; slaveUnit < numbOfSlaves; slaveUnit++){
+
+          String slaveID = macSlave[slaveUnit];
+          if(slaveID == "FF:FF:FF:FF:FF:FF") continue;    // Skip unit if it is deleted
+
+          // Temp[0] Hum[1] Press[2] Lat[3] Lng[4] Alt[5] BatteryPercent[6]
+          float slaveData[7];
+        
+          // If error, store id for a second attempt
+          if(!getSlaveData(slaveUnit, slaveData)) { resivedData[slaveUnit] = false; continue; }  
+
+          unsigned long TS = millis();
+          while(!ubiPubData(slaveID, slaveData))
           {
-            Serial.println("ERROR: can not publish to Ubidots");
-            break;
-          } 
+            if((millis()-TS) > ubiPubFreq*2)
+            {
+              Serial.println("ERROR: can not publish to Ubidots");
+              break;
+            } 
+          }
         }
-      }
 
 
-      // Do a secound attempt to get data from slave units
-      uint8_t slaveUnit = 0;
+        // Do a secound attempt to get data from slave units
+        uint8_t slaveUnit = 0;
 
-      for(bool state : resivedData)
-      {
-        slaveUnit++;
-        if(state) continue;   // Move on to next devise
-
-        String slaveID = EEPROM.readString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC *slaveUnit);
-
-        // Temp[0] Hum[1] Press[2] Lat[3] Lng[4] Alt[5] BatteryPercent[6]
-        float slaveData[7];
-
-        if(!getSlaveData(slaveUnit, slaveData)) continue;
-
-        unsigned long TS = millis();
-        while(!ubiPubSlaveData(slaveID, slaveData))
+        for(bool state : resivedData)
         {
-          if((millis()-TS) > ubiPubFreq*2)
-          { 
-            Serial.println("ERROR: can not publish to Ubidots"); 
-            break; 
-          } 
+          slaveUnit++;
+          if(state) continue;   // Move on to next devise
+
+          String slaveID = macSlave[slaveUnit];
+
+          // Temp[0] Hum[1] Press[2] Lat[3] Lng[4] Alt[5] BatteryPercent[6]
+          float slaveData[7];
+
+          if(!getSlaveData(slaveUnit, slaveData)) continue;
+
+          unsigned long TS = millis();
+          while(!ubiPubData(slaveID, slaveData))
+          {
+            if((millis()-TS) > ubiPubFreq*2)
+            { 
+              Serial.println("ERROR: can not publish to Ubidots"); 
+              break; 
+            } 
+          }
+          resivedData[slaveUnit] = true;
         }
-        resivedData[slaveUnit] = true;
+        retryFetchSlaveData = false;
       }
+    }
+
+
+
+    ////////////////////
+    //      SLAVE     //
+    ////////////////////
+
+    else {
+
+      // Attempt to get ID form master if none is given
+      if (!master && CComErr) CComErr = !CCom.getId(); 
+
+      // Communication with master unit
+      commLoop();
+
     }
   }
 
 
-  // SLAVE CONFIGURATION
-  else {
+  /////////////////////
+  //  END PROCEDURE  //
+  /////////////////////
 
-    // Lisen for incoming data
-      commLoop();
-    
-    
-    // -- Wait for data transmission request from master
-
-    // -- Transmit data when requested from master
-
-    // -- Calculate amount of seconds until time is XX.00.00
-
-    // -- Go to sleep for given amount of time
-  }
+  // Decide if unit shoud be put into deep sleep or only shut off display
+  
+  // Only valid if the buttonpush triggered the wakeup
+  if      (!hourChange && !timerWakeup && (millis() - buttonTS > awakeTime))  goToDeepSleep();    // Go to deep sleep if no other activity
+  else if (millis() - buttonTS > awakeTime){                                  display.disable(); buttonPress = false;}  // Only turn off display if timer runs out but other activity
+  
+  // Go to deep sleep if unit has attempted to get data from other units for x amount of seconds
+  if ((millis() - setupTime > timeDataFetchSlaves) || millisRollover)         goToDeepSleep();
 
 
-  // if (all data sent OK){
-    
   millis_prev = millis();
+  hour_prev = hour();
   delay(0);                                  // Scan frequency
   
 }

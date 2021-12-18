@@ -84,6 +84,9 @@ static const uint32_t GPSBaud = 9600;
 // Milliseconds given to user when selecting master/slave
 int selTime = 10 * mS_TO_S_FACTOR;
 
+unsigned long timeDataFetchSlaves = 180 * mS_TO_S_FACTOR;
+
+
 //////////////////////////////////////////////////////
 //                                                  //
 //                     UBIDOTS                      //
@@ -123,6 +126,7 @@ const char *WIFI_PASS = "ClusterNet";                                   // WiFi 
 //////////////////////////////////////////////////////
 
 #define ALLOWED_SLAVES 10
+
 
 
 //////////////////////////////////////////////////////
