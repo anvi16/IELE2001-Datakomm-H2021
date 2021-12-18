@@ -82,7 +82,7 @@ static const uint32_t GPSBaud = 9600;
 
 
 // Milliseconds given to user when selecting master/slave
-int selTime = 30 * mS_TO_S_FACTOR;
+int selTime = 10 * mS_TO_S_FACTOR;
 
 //////////////////////////////////////////////////////
 //                                                  //
@@ -98,7 +98,7 @@ int selTime = 30 * mS_TO_S_FACTOR;
 // Publish variables
 const char *UBIDOTS_TOKEN = "BBFF-pzGZkRPVMO7baDRylwiST623Ow5DrF";      // Token corresponding to IELET2001 2021 gr30
 const char *DEVICE_LABEL = "Aalesund";                                  // Ubidots: Device label to which data will be published
-const int ubiPubFreq = 60*1000;                                         // Ubidots: Publish rate (ms between pub)
+const int ubiPubFreq = 2*1000;                                         // Ubidots: Publish rate (ms between pub)
 unsigned long ubiPubTS;                                                 // Ubidots: Timestamp for last publish
 
 
@@ -133,5 +133,5 @@ const char *WIFI_PASS = "ClusterNet";                                   // WiFi 
 
 
 #define TIME_TO_SLEEP 30       // Time ESP32 will sleep for (in seconds)
-#define TIME_TO_SLEEP_CHECK 600 // How often to check if the contitions for sleep mode are met
+#define TIME_TO_SLEEP_CHECK 6000 // How often to check if the contitions for sleep mode are met
 

@@ -32,6 +32,8 @@ void ClusterCom::begin(const char* encryptkey, uint16_t eepromSize, uint16_t idE
     pinMode(_pwrTx,OUTPUT);     // Set pinmode for control of power supply transmitter
     pinMode(_pwrRx,OUTPUT);     // Set pinmode for control of power supply reciever
     
+    manager.setTimeout(500);
+    manager.setRetries(5);
     manager.init();
 
     EEPROM.begin(eepromSize);
@@ -82,16 +84,32 @@ bool ClusterCom::send(float msgFloat, const char* msgStr, uint8_t receiver, MT m
 		Serial.println(n);
 	#endif
 
+    //int8_t retry = 0;
+
+    //if(--retry <= 0) 
+    //        break;
+
     if (n <= MAX_PACKET_SIZE) {
         // Send message
-        if (manager.sendtoWait((uint8_t*)buffer, n, receiver)) 
-        {
+        if(manager.sendtoWait((uint8_t*)buffer, n, receiver)) 
+        {    
+            //const char* ack = "ack";
+            //n = sizeof(ack);
+
+            /* if(manager.sendtoWait((uint8_t*)ack, n, receiver)) 
+            {
+                #ifdef DEBUG
+                    Serial.println("ACK on ACK ");      // Make shure to tell resiver that we resived ACK
+                #endif
+            } */
+
             #ifdef DEBUG
                 Serial.println("ACK");
             #endif
-
+            
             return true;
         }
+ 
         #ifdef DEBUG
             else Serial.println("sendtoWait failed");
         #endif
@@ -128,7 +146,7 @@ bool ClusterCom::available(uint8_t* mt, String* msgStr, float* msgFloat, uint8_t
 	            Serial.println((char*)_buf);
             #endif
             
-            id = &from;
+            *id = from;
             readRecivedData(mt, msgStr, msgFloat);
             return true;
         }
@@ -153,7 +171,7 @@ bool ClusterCom::available(uint8_t* mt, String* msgStr, float* msgFloat, uint8_t
             Serial.println((char*)_buf);
         #endif
         
-        id = &from;
+        *id = from;
         readRecivedData(mt, msgStr, msgFloat);
         return true;
     }
@@ -165,7 +183,7 @@ bool ClusterCom::available(uint8_t* mt, String* msgStr, float* msgFloat, uint8_t
 bool ClusterCom::reciveId(String mac)
 {
     uint8_t from;
-    uint16_t wait = 4000;   // 4sec
+    uint16_t wait = 4000;   // Wait max 1sec
     uint8_t len = sizeof(_buf);
 	
     // Wait for a message addressed to client

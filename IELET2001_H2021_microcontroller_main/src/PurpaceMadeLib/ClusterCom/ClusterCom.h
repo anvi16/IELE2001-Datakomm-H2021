@@ -54,11 +54,11 @@ class ClusterCom {
 	    DATA  = 5
     };
 
-	ClusterCom(uint8_t pinRx = 27, uint8_t pinTx = 26, uint8_t pwrRx = 25, uint8_t pwrTx = 33, uint32_t serialBaud = 9600, uint8_t id = 255);
+	ClusterCom(uint8_t pinRx = 27, uint8_t pinTx = 26, uint8_t pwrRx = 25, uint8_t pwrTx = 33, uint32_t serialBaud = 9600, uint8_t id = 0);
 
 	void begin(const char* encryptkey = nullptr, uint16_t eepromSize = EEPROM_SIZE, uint16_t idEepromAddress = ID_EEPROME_ADDRESS, uint16_t masterIdEepromAddress = MASTER_ID_EEPROME_ADDRESS);
-	bool send(const char* msg, uint8_t receiver = 1, MT mt = DATA, uint8_t id = 0);
-	bool send(float msg, uint8_t receiver = 1, MT mt = DATA, uint8_t id = 0);
+	bool send(const char* msg, uint8_t receiver, MT mt, uint8_t id = 0);
+	bool send(float msg, uint8_t receiver, MT mt, uint8_t id = 0);
 	bool available(uint8_t *mt, String *msgStr, float *msgFloat, uint8_t* id);
 	bool available(uint8_t* mt, String* msgStr, float* msgFloat, uint8_t* id, uint16_t wait);
 	bool getId();

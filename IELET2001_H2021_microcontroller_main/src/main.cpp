@@ -65,7 +65,6 @@ Button S2(btnS2, true);
 
 
 
-
 /****************************************
 * Global buffer variables 
 ****************************************/
@@ -91,6 +90,8 @@ uint8_t from;               // ID to sender of the incoming message
 uint8_t numbOfSlaves = 0;   // Remember how many slaves this master has addressed
 
 bool master = false;        // True if device is master
+
+unsigned long setupTime;    // Get time after setup
 
 
 /****************************************
@@ -193,6 +194,7 @@ bool ubiPubSlaveData(String slaveID, float* slaveData){
                     slaveData[ALT     ],  // Altitude
                     slaveData[BATPERC ]); // Battery Percent
     ubiPubTS = millis();
+    Serial.println("Data published to ubi");
     return true;
   }
   return false;
@@ -209,18 +211,42 @@ bool ubiPubSlaveData(String slaveID, float* slaveData){
  * AUX
 ****************************************/
 
-
-void dataFetchLoop(){
-  gps.refresh(true);                              // Update data from GPS and syncronize time and date
+// Gathers all necessarry data and returns "true" if data is gathered successfully
+bool dataFetchLoop(bool getGPS){
+  
+  bool _dataOK[8] = {false, false, false, false, false, false, false, false};
+  
+  if (getGPS){
+    gps.refresh(true);                            // Update data from GPS and syncronize time and date 
+    sensorData[LAT]     = gps.getLatitude();      // Latitude
+    sensorData[LNG]     = gps.getLongitude();     // Longitude
+    sensorData[ALT]     = gps.getAltitude();      // Altitude
+  }
   unit.refresh();                                 // Update data from unit (battery state)
   sensorData[TEMP]    = ws.getTempC();            // Temperature
   sensorData[HUM]     = ws.getHum();              // Humidity
   sensorData[PRESS]   = ws.getPressHPa();         // Pressure
-  sensorData[LAT]     = gps.getLatitude();        // Latitude
-  sensorData[LNG]     = gps.getLongitude();       // Longitude
-  sensorData[ALT]     = gps.getAltitude();        // Altitude
   sensorData[BATPERC] = unit.getBatteryPercent(); // Battery Percent
   sensorData[BATVOLT] = unit.getBatteryVoltage(); // Battery Voltage
+
+  // Do not include temperature data == 0.0 in comparison, since it's likely that it can be 0
+  for (int i=1; i<8 ; i++){
+    if (sensorData[i] != 0.0) _dataOK[i] = true;
+  }
+
+  // Compensate if gps data is not activated
+  if (!getGPS){
+    for (int i=3; i<6; i++){_dataOK[i] = true;}
+  }
+
+  // Sum up if all data have been retrieved successfully
+  bool _ok = true; 
+  for (int i=1; i<8 ; i++){
+    if (!_dataOK[i]) _ok = false;
+  }
+
+  // Return sum of all data gathering
+  return _ok;
 }
 
 void displayLoop(){
@@ -254,7 +280,7 @@ void displayLoop(){
 bool getSlaveData(uint8_t slaveUnit, float* slaveData){
 
   bool     err  = false;
-  uint16_t wait = 500;  // 0.5sec
+  uint16_t wait = 4000;  // 4sec
   uint8_t  i    = 0;
 
   String dataName[] = {"temp", "hum", "press", "lat", "lng", "alt", "batperc"};
@@ -262,7 +288,9 @@ bool getSlaveData(uint8_t slaveUnit, float* slaveData){
   // -- Get slave data
   for(String name : dataName)
   {
-    err = CCom.send(name.c_str(), slaveUnit+2, CCom.DATA) ? !CCom.available(&mt, &msgStr, &msgFloat, &from, wait) : true;   // Send and wait for response for a desired amount of time
+    delay(50);
+    err = !CCom.send(name.c_str(), slaveUnit+2, CCom.DATA);    // Send and wait for response for a desired amount of time
+    if(!err) err = !CCom.available(&mt, &msgStr, &msgFloat, &from, wait);
     if(err) {err = true; break;} 
     
     if(mt == CCom.DATA && from == slaveUnit+2)    // Check desired data is resived and store to array
@@ -274,6 +302,8 @@ bool getSlaveData(uint8_t slaveUnit, float* slaveData){
     Serial.print("ERROR");
     Serial.println(msgStr);
   }
+
+  if(!err) CCom.send("Sleep", slaveUnit+2, CCom.SLEEP);    // Tell slave to speep
 
   // Clear buffers
   mt       = 0;
@@ -290,6 +320,11 @@ void commLoop(){
   // Recive incoming messages from RF module
   if(CCom.available(&mt, &msgStr, &msgFloat, &from))
   {
+    Serial.println(mt);
+    if(msgStr)   Serial.println(msgStr);
+    if(msgFloat) Serial.println(msgFloat);
+    Serial.println(from);
+
     switch (mt)
     {
       case CCom.PING:
@@ -301,7 +336,7 @@ void commLoop(){
 
         if(master)
         {
-          if(numbOfSlaves <= ALLOWED_SLAVES && from == 0)
+          if(numbOfSlaves < ALLOWED_SLAVES && from == 0)
           {
             if(CCom.send(msgStr.c_str(), 0, CCom.ID, ++numbOfSlaves +1))    // Address from 2
             {
@@ -350,7 +385,8 @@ void commLoop(){
         break;
 
 
-      case CCom.ERROR:                                       // Handle error that har occured on slave devices
+      case CCom.ERROR:    // Handle error that har occured on slave devices
+                                        
         Serial.print("ERROR: ");
         Serial.println(msgStr);                              // develop action in next version   
         break;
@@ -373,13 +409,14 @@ void commLoop(){
         else{              // Data from master
           if(dataIsReady)
           {
-            if(msgStr == "temp"   ) CCom.send(sensorData[TEMP   ], from, CCom.DATA);
-            if(msgStr == "hum"    ) CCom.send(sensorData[HUM    ], from, CCom.DATA);
-            if(msgStr == "press"  ) CCom.send(sensorData[PRESS  ], from, CCom.DATA);
-            if(msgStr == "lat"    ) CCom.send(sensorData[LAT    ], from, CCom.DATA);
-            if(msgStr == "lng"    ) CCom.send(sensorData[LNG    ], from, CCom.DATA);
-            if(msgStr == "alt"    ) CCom.send(sensorData[ALT    ], from, CCom.DATA);
-            if(msgStr == "batprec") CCom.send(sensorData[BATPERC], from, CCom.DATA);
+                 if(msgStr == "temp"   ) CCom.send(sensorData[TEMP   ], from, CCom.DATA);
+            else if(msgStr == "hum"    ) CCom.send(sensorData[HUM    ], from, CCom.DATA);
+            else if(msgStr == "press"  ) CCom.send(sensorData[PRESS  ], from, CCom.DATA);
+            else if(msgStr == "lat"    ) CCom.send(sensorData[LAT    ], from, CCom.DATA);
+            else if(msgStr == "lng"    ) CCom.send(sensorData[LNG    ], from, CCom.DATA);
+            else if(msgStr == "alt"    ) CCom.send(sensorData[ALT    ], from, CCom.DATA);
+            else if(msgStr == "batperc") CCom.send(sensorData[BATPERC], from, CCom.DATA);
+            else  CCom.send("Doesn't provide this data", from, CCom.ERROR);
           }
           else CCom.send("Data not ready", from, CCom.ERROR);
         }          
@@ -387,7 +424,8 @@ void commLoop(){
 
 
       default:            // Unknown massege type
-        CCom.send("Device dosn't support mt", from, CCom.ERROR);
+        //CCom.send("Device dosn't support mt", from, CCom.ERROR);
+        break;
     }
 
     mt       = 0;
@@ -403,7 +441,7 @@ void commLoop(){
     //CCom.send();
 
     // Time to sleep
-    esp_deep_sleep_start();    // Go to sleep
+    //esp_deep_sleep_start();    // Go to sleep
   }
 
 }
@@ -487,9 +525,6 @@ void setup() {
   
   
   // Enable external sensors                              
-  #ifdef TEST
-    gps.enable();                               // Force GPS module ON
-  #endif
 
   if (hour() == 12) gps.enable();               // Only enable GPS module if time is current hour is 12
   ws.enable();                                  // Establish I2C com with Weather Station
@@ -563,8 +598,10 @@ void setup() {
     display.setString(6, "ClusterCom...");
     display.refresh();
     CCom.begin(UBIDOTS_TOKEN, EEPROM_SIZE, ID_EEPROME_ADDRESS);
+    delay(100);
 
     bool err = !CCom.getId();
+
     if (err){
       Serial.println("Failed to obtain id");
       display.setString(5, "Failed to");
@@ -604,6 +641,8 @@ void setup() {
     Serial.println("Wakeup:Timer");
     break;
   }
+
+  setupTime = millis();
 }
 
 
@@ -617,7 +656,7 @@ void loop(){
   else millisRollover = false;
 
   // Update data from unit
-  dataFetchLoop();
+  dataIsReady = dataFetchLoop(hour()==12);    // Get gps data only when the hour says 12. Returns true when requested data is updated
   displayLoop();
 
   // If year is not updated, do not continue until GPS has updated time and date (To be able so sync units)
@@ -646,7 +685,7 @@ void loop(){
       if (scan < 3) scan ++;
       else scan = 0;
 
-      delay(250);
+      delay(100);
 
     }
   }
@@ -661,52 +700,73 @@ void loop(){
   // Master communication behaviour
   if(master){
 
-    // Lisen for incoming data
-    // -- Scan local area for new slaves
-      commLoop();
+    // Listen for incoming data
+    // Scan local area for new slaves
+    commLoop();
+    // ubiPubSlaveData(ubidotsId, sensorData);
 
 
-  /* // Fetch data from slave units
-    -- Request data from the given slave number
-    -- Wait for data from the given slave
-    -- If no data recieved, stash unit number in an array, 
-    -- to request again at the end of the original list
-    -- Push data to the cloud
-  */
-    bool resivedData[numbOfSlaves] = {1};
+  uint16_t timeout = 10000; //10sec
 
-    for (int slaveUnit = 0; slaveUnit < numbOfSlaves; slaveUnit++){
+  if((millis() - setupTime) > timeout )   // Don't fetch data right after boot
+  {
+    /* // Fetch data from slave units
+      -- Request data from the given slave number
+      -- Wait for data from the given slave
+      -- If no data recieved, stash unit number in an array, 
+      -- to request again at the end of the original list
+      -- Push data to the cloud
+    */
+      bool resivedData[numbOfSlaves] = {1};
+      for (int slaveUnit = 0; slaveUnit < numbOfSlaves; slaveUnit++){
 
-      String slaveID = EEPROM.readString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC *slaveUnit);
+        String slaveID = EEPROM.readString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC *slaveUnit);
+        if(slaveID == "FF:FF:FF:FF:FF:FF") continue;    // Skip unit if it is deleted
 
-      if(slaveID == "FF:FF:FF:FF:FF:FF") continue;    // Skip unit if it is deleated
+        // Temp[0] Hum[1] Press[2] Lat[3] Lng[4] Alt[5] BatteryPercent[6]
+        float slaveData[7];
+      
+        // If error, store id for a second attempt
+        if(!getSlaveData(slaveUnit, slaveData)) { resivedData[slaveUnit] = false; continue; }  
 
-      // Temp[0] Hum[1] Press[2] Lat[3] Lng[4] Alt[5] BatteryPercent[6]
-      float slaveData[7];
-    
-      // If error, store id for a second attempt
-      if(!getSlaveData(slaveUnit, slaveData)) { resivedData[slaveUnit] = false; continue; }  
-      if(!ubiPubSlaveData(slaveID, slaveData)) Serial.println("ERROR: can not publish to Ubidots");
-    }
+        unsigned long TS = millis();
+        while(!ubiPubSlaveData(slaveID, slaveData))
+        {
+          if((millis()-TS) > ubiPubFreq*2 > 0)
+          {
+            Serial.println("ERROR: can not publish to Ubidots");
+            break;
+          } 
+        }
+      }
 
 
-    // Do a secound attempt to get data from slave units
-    uint8_t slaveUnit = 0;
+      // Do a secound attempt to get data from slave units
+      uint8_t slaveUnit = 0;
 
-    for(bool state : resivedData)
-    {
-      slaveUnit++;
-      if(state) continue;   // Move on to next devise
+      for(bool state : resivedData)
+      {
+        slaveUnit++;
+        if(state) continue;   // Move on to next devise
 
-      String slaveID = EEPROM.readString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC *slaveUnit);
+        String slaveID = EEPROM.readString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC *slaveUnit);
 
-      // Temp[0] Hum[1] Press[2] Lat[3] Lng[4] Alt[5] BatteryPercent[6]
-      float slaveData[7];
+        // Temp[0] Hum[1] Press[2] Lat[3] Lng[4] Alt[5] BatteryPercent[6]
+        float slaveData[7];
 
-      if(!getSlaveData(slaveUnit, slaveData)) continue;
-      if(!ubiPubSlaveData(slaveID, slaveData)) Serial.println("ERROR: can not publish to Ubidots");    
+        if(!getSlaveData(slaveUnit, slaveData)) continue;
 
-      resivedData[slaveUnit] = true;
+        unsigned long TS = millis();
+        while(!ubiPubSlaveData(slaveID, slaveData))
+        {
+          if((millis()-TS) > ubiPubFreq*2)
+          { 
+            Serial.println("ERROR: can not publish to Ubidots"); 
+            break; 
+          } 
+        }
+        resivedData[slaveUnit] = true;
+      }
     }
   }
 
@@ -716,8 +776,6 @@ void loop(){
 
     // Lisen for incoming data
       commLoop();
-    
-    
     
     
     // -- Wait for data transmission request from master
@@ -732,10 +790,8 @@ void loop(){
 
   // if (all data sent OK){
     
-  
-
   millis_prev = millis();
-  delay(2000);                                  // Scan frequency
+  delay(0);                                  // Scan frequency
   
 }
 
