@@ -50,9 +50,11 @@ bool RHReliableDatagram::sendtoWait(uint8_t* buf, uint8_t len, uint8_t address)
     // Assemble the message
     uint8_t thisSequenceNumber = ++_lastSequenceNumber;
     uint8_t retries = 0;
-	uint32_t time = 0;
+	unsigned long time = 0;
+	
     while (retries++ <= _retries)
     {
+		bool run = true;
 	setHeaderId(thisSequenceNumber);
 
         // Set and clear header flags depending on if this is an
@@ -127,9 +129,11 @@ bool RHReliableDatagram::sendtoWait(uint8_t* buf, uint8_t len, uint8_t address)
 
 		    // Else discard it
 		}
-		Serial.print(time-millis());
-		Serial.println(" - delay in read after transmitt 2");
-		break;
+			if(run){
+				Serial.print(time-millis());
+				Serial.println(" - delay in read after transmitt 2");
+				run = false;
+			}
 	    }
 	    // Not the one we are waiting for, maybe keep waiting until timeout exhausted
 	    YIELD;
