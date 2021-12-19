@@ -234,7 +234,7 @@ bool dataFetchLoop(bool getGPS){
   
   bool _dataOK[8] = {false, false, false, false, false, false, false, false};
   
-  if (getGPS){
+  if (getGPS && gps.isEnabled()){
     gps.refresh(true);                            // Update data from GPS and syncronize time and date 
     sensorData[LAT]     = gps.getLatitude();      // Latitude
     sensorData[LNG]     = gps.getLongitude();     // Longitude
@@ -269,6 +269,7 @@ bool dataFetchLoop(bool getGPS){
 
 void displayLoop(){
   // Move relevant data to display object and draw lock screen
+  display.selectLockScreen();
   display.setLockScreenData(sensorData[TEMP],     // Temperature
                             sensorData[HUM],      // Humidity
                             sensorData[PRESS],    // Pressure
@@ -286,7 +287,6 @@ void displayLoop(){
   }
 
   // Select right screen config and refresh to push changes   
-  display.selectLockScreen();
   display.refresh();
 }
 
@@ -331,7 +331,6 @@ bool getSlaveData(uint8_t slaveUnit, float* slaveData){
 
   return err ? false : true;
 }
-
 
 void commLoop(){
 
@@ -477,14 +476,6 @@ void setup() {
   delay(1000);
 
   EEPROM.begin(EEPROM_SIZE);
-
-  #ifdef WIPE_EEPROM
-    for (int i = 0; i < EEPROM_SIZE; i++) {
-      EEPROM.write(i, 255);
-    }
-    EEPROM.commit();
-    delay(500); 
-  #endif
   
   // Enable hardware timer for wakeup
   /*
@@ -527,9 +518,8 @@ void setup() {
   Serial.begin(serialBaud);  
   delay(1000);
 
-  
-
   // Button object begin to enable monitoring of 
+  pinMode(btnS2, INPUT);
   S2.begin();
 
   // Startup sequence
@@ -563,8 +553,7 @@ void setup() {
       
       if (master) EEPROM.write(CONFIG_STATE, MASTER);
       else        EEPROM.write(CONFIG_STATE, SLAVE);
-      // EEPROM.commit();
-
+      EEPROM.commit();
       break;}
     
     
@@ -587,10 +576,13 @@ void setup() {
   display.setString(6, "");
   display.refresh();
   
-  
   // Enable external sensors                              
 
-  if (hour() == 12) gps.enable();               // Only enable GPS module if time is current hour is 12
+  if ((hour() == gpsCheckHour1) ||
+      (hour() == gpsCheckHour2)||
+      (year() < 2020)){
+    gps.enable();                               // Only enable GPS module if needed
+  }
   ws.enable();                                  // Establish I2C com with Weather Station
   CCom.enable();                                // Power up radio transmission modules
   unit.enable();                                // Set pinmode for battery surveilance
@@ -661,6 +653,7 @@ void setup() {
 
   else{
     display.setString(3, "as \"Slave\"");
+    
 
     // CLUSTERCOM
     // Setup crypt key and eeprom storage
@@ -693,15 +686,20 @@ void setup() {
 }
 
 
-
-
-
 /****************************************
  * MAIN
 ****************************************/
 void loop(){
+
+  bool okToSleep = true;   // Rill be set to false during loop by program parts that need it
   
-  if (buttonPress) display.enable();
+  S2.read();
+
+  if (buttonPress) {
+    display.enable();
+    display.selectLockScreen();
+    display.refresh();
+  }
 
   // millis() rollover check
   if(millis() < millis_prev)  millisRollover = true;
@@ -711,17 +709,19 @@ void loop(){
   if(hour() != hour_prev) hourChange = true;
 
   // Update data from unit
-  dataIsReady = dataFetchLoop(false && hour()==12);    // Get gps data only when the hour says 12. Returns true when requested data is updated
-  
+  dataIsReady = dataFetchLoop((hour() == gpsCheckHour1)||(hour() == gpsCheckHour2));    // Get gps data only when the hour says 12. Returns true when requested data is updated
+
   // Update display
   displayLoop();
-
-  /* 
+  
   // If year is not updated, do not continue until GPS has updated time and date (To be able so sync units)
-  if (year()<= 2020){
+  if ((year()<= 2020) && (gpsReconAttempts > 0)){
+    
     int scan = 0;
-    gps.enable();  
-    while (year()<= 2020){
+    int totScan = 30 * 10;       // Run loop for 30 seconds to see if GPS data is recieved
+    delay(1000); 
+     
+    while ((year()<= 2020) && gps.isEnabled()){
 
       // Startup sequence
       display.selectMessageScreen();
@@ -743,34 +743,40 @@ void loop(){
       if (scan < 3) scan ++;
       else scan = 0;
 
-      delay(100);
-
+      if (totScan <= 2){
+        okToSleep = false;  // Cannot go to sleep since time not ok
+        display.clearStrings();
+        gpsReconAttempts--; // Decrement amount of remaining attempts
+        break;
+      }
+      totScan--;
+      delay(0);
     }
   }
-  */
+
+  
 
   /*******************************************************
   * Communicate data between units and publish to Ubidots
   ********************************************************/
   
-  // Is triggered either by periodical wakeuptimer or by an hour change if wakeup was triggered by button
-  if (true || timerWakeup || hourChange){
-    // Start gathering data and publish to ubidots
- 
-    ////////////////////
-    //     MASTER     //
-    ////////////////////
+  ////////////////////
+  //     MASTER     //
+  ////////////////////
 
-    // Master communication behaviour
-    if(master){
-      
+  if (master){
+
+    // Start communication Listen for incoming data
+    // Scan local area for new slaves
+    commLoop();
+     
+    // Is triggered either by periodical wakeuptimer or by an hour change if wakeup was triggered by button
+    if(timerWakeup || hourChange){
+      // Start gathering data and publish to ubidots
+
       // UBIDOTS - Check if connected and reconnect if not
       ubidots.loop();
       if (!ubidots.connected()) ubidots.reconnect();
-
-      // Start communication Listen for incoming data
-      // Scan local area for new slaves
-      commLoop();
 
       // Publish Master data if not allready done. Make 5 attempts with 1 second spacing
       if (!masterDataPublished && dataIsReady){
@@ -782,7 +788,7 @@ void loop(){
       } 
 
       // Fetch data from slaves 
-      uint16_t timeout = 10000; //10sec
+      uint16_t timeout = 120 * uS_TO_S_FACTOR; //Leave 2 minutes to slaves to fetch data
 
       if((millis() - setupTime) > timeout && numbOfSlaves && retryFetchSlaveData){ 
       // Don't fetch data right after boot,
@@ -846,25 +852,47 @@ void loop(){
           }
           resivedData[slaveUnit] = true;
         }
-        retryFetchSlaveData = false;
+        
+        fetchSlaveDataAttempts --;
+        if (fetchSlaveDataAttempts < 1){
+          retryFetchSlaveData = false;
+        }
       }
     }
+  }
+  ////////////////////
+  //      SLAVE     //
+  ////////////////////
 
+  if (!master){
+    
+    // Attempt to get ID from master if none is given
+    if (CComErr && getIDAttempts > 0) {
+      Serial.println("Com err");
+      display.selectMessageScreen();
+      display.setString(0, "CCom");
+      display.setString(2, "Obtaining ID");
+      display.setString(3, "from \"Master\"");
+      display.refresh();
+      Serial.println("Attempting to obtain ID from Master");
+      
+      CComErr = !CCom.getId();
+      
+      if (CComErr)  {display.setString(5, "Failed to"); display.setString(6, "obtain ID"); okToSleep = false;}
+      else          {display.setString(5, "ID obtained"); display.setString(6, "successfully");}
+      display.refresh();
+      delay(1000);
 
-
-    ////////////////////
-    //      SLAVE     //
-    ////////////////////
-
-    else {
-
-      // Attempt to get ID form master if none is given
-      if (!master && CComErr) CComErr = !CCom.getId(); 
-
-      // Communication with master unit
-      commLoop();
-
+      // Go back to lock screen
+      display.clearStrings();
+      display.selectLockScreen();
+      
+      display.refresh();
+      delay (500);
+      getIDAttempts--;
     }
+
+    commLoop;         // Run com loop when button has booted unit, so it can associate with master/slave
   }
 
 
@@ -874,17 +902,96 @@ void loop(){
 
   // Decide if unit shoud be put into deep sleep or only shut off display
   
-  // Only valid if the buttonpush triggered the wakeup
-  if      (!hourChange && !timerWakeup && (millis() - buttonTS > awakeTime))  goToDeepSleep();    // Go to deep sleep if no other activity
-  else if (millis() - buttonTS > awakeTime){                                  display.disable(); buttonPress = false;}  // Only turn off display if timer runs out but other activity
+  // Sleep enable 
+  if (okToSleep){
+    
+    // Only valid if the buttonpush triggered the wakeup
+    if (!hourChange && !timerWakeup && (millis() - buttonTS > awakeTime)){
+      Serial.println("Sending unit to deep sleep based on buttonpush wakeup");
+      display.disable();
+      goToDeepSleep(); 
+      }    // Go to deep sleep if no other activity
+    
+    else if (display.isEnabled() && (millis() - buttonTS > awakeTime)){
+      display.disable(); buttonPress = false;           // Only turn off display if timer runs out but other activity
+      Serial.println("Disabling display");
+    }
   
-  // Go to deep sleep if unit has attempted to get data from other units for x amount of seconds
-  if ((millis() - setupTime > timeDataFetchSlaves) || millisRollover)         goToDeepSleep();
+    // Go to deep sleep if unit has attempted to get data from other units for x amount of seconds
+    if ((hourChange || timerWakeup) && ((millis() - setupTime > timeDataFetchSlaves) || millisRollover)){
+      Serial.println("Sending unit to deep sleep");
+      display.disable();
+      goToDeepSleep(); 
+    }
+  }
 
+  S2.read();
+  // Factory reset and reboot
+  if(S2.pressedFor(2000)){
+    display.selectMessageScreen();
+    display.setString(0, "Reset unit");
+    display.setString(2, "To reset unit,");
+    display.setString(3, "keep pressing");
+    display.setString(4, "right button");
+    display.refresh();
+    
+    uint8_t scanTot = 8*6;
+    uint8_t scanShort = 0;
+    while (S2.isPressed()){
+      
+      S2.read();
+
+      // Loading symbol
+      if      (scanShort == 0) display.setString(6, "|");
+      else if (scanShort == 1) display.setString(6, "/");
+      else if (scanShort == 2) display.setString(6, "-");
+      else if (scanShort == 3) display.setString(6, "\\");
+
+      if (scanShort < 3) scanShort++;
+      else scanShort = 0;
+
+      if      (scanTot > 5*8) display.setString(8, "6");
+      else if (scanTot > 4*8) display.setString(8, "5");
+      else if (scanTot > 3*8) display.setString(8, "4");
+      else if (scanTot > 2*8) display.setString(8, "3");
+      else if (scanTot > 1*8) display.setString(8, "2");
+      else if (scanTot > 0)   display.setString(8, "1");
+
+      display.refresh();
+
+      if (scanTot <= 0){
+        display.setString(1, "");
+        display.setString(2, "");
+        display.setString(3, "Resetting unit");
+        display.setString(4, "to factory");
+        display.setString(5, "settings");
+        display.setString(6, "");
+        display.setString(8, "");
+        display.refresh();
+
+        delay(10);
+    
+        for (int i = 0; i < EEPROM_SIZE; i++) {
+          EEPROM.write(i, 255);
+        }
+        EEPROM.commit();
+        delay(500); 
+        ESP.restart();
+      }
+      scanTot --;
+      delay(125);
+    }
+  }
+  display.clearStrings();
+
+  if (gps.isEnabled() && dataIsReady && (year() > 2020)){
+    gps.disable();
+  }
 
   millis_prev = millis();
   hour_prev = hour();
   delay(0);                                  // Scan frequency
+
   
 }
 

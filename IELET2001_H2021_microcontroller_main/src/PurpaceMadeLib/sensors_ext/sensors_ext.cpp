@@ -46,6 +46,8 @@ GPS::GPS(int baudGPS, long baudSerial, int pinPS, int pinTx, int pinRx):
     sec =       0;
     ms =        0;
 
+    enabled = false;
+
     // Define the pin powering the GPS module as an output
     
     pinMode(GPSPsPin, OUTPUT);
@@ -58,7 +60,9 @@ GPS::GPS(int baudGPS, long baudSerial, int pinPS, int pinTx, int pinRx):
 
 void GPS::enable(){
 
-    refreshStartTS = millis();                  // Set timestamp for function call
+    enabled = true;
+
+    enableStartTS = millis();                  // Set timestamp for function call
     
     #ifdef DEBUG
         Serial.println("Enabling GPS module");
@@ -72,7 +76,6 @@ void GPS::enable(){
     
     ssGPS.begin(GPSBaud);                       // Establish software serial for GPS with given baud rate
 
-
     // Wait for 10 seconds to see if serial communication for GPS becomes available
     while ((millis() - enableStartTS < enableTime) && !ssGPS.available()){
         // Wait to see if serial com is set up successfully
@@ -80,6 +83,7 @@ void GPS::enable(){
     
     // Feedback saying if serial communication is set up sucessfully or not
     if (ssGPS.available()){
+        enabled = true;
         #ifdef DEBUG
             Serial.println("Serial communication set up successfully");
         #endif
@@ -92,6 +96,10 @@ void GPS::enable(){
     
 
 };
+
+bool GPS::isEnabled(){
+    return enabled;
+}
 
 void GPS::refresh(bool syncDateTime = HIGH){
 
@@ -249,6 +257,8 @@ void GPS::refresh(bool syncDateTime = HIGH){
 }
 
 void GPS::disable(){
+
+    enabled = false;
     
     #ifdef DEBUG
         Serial.println("Disabling GPS module");

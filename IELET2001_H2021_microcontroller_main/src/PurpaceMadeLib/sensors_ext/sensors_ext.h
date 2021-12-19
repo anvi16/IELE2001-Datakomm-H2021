@@ -66,7 +66,7 @@ class GPS{
         unsigned long timeUpdateTS;         // Timestamp for last time update
   
         const int timezoneOffset = 1;       // Central European Time
-
+        bool enabled;
 
     public:
 
@@ -76,7 +76,10 @@ class GPS{
         // Unit control
         
         // Power up and start communication with GPS module
-        void enable();   
+        void enable();  
+
+        // Returns true if gps is enabled
+        bool isEnabled(); 
 
         // Update stored value for GPS data (loc, alt, date, time)
         // When syncTimeAndDate is set HIGH, the internal time and

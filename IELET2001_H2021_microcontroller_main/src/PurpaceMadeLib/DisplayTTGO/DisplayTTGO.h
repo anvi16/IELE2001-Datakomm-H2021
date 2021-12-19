@@ -63,6 +63,9 @@ class DisplayTTGO{
         // Enable display 
         void enable();
 
+        //Returns true if display is enabled
+        bool isEnabled();
+
         // Shut down display
         void disable();
 

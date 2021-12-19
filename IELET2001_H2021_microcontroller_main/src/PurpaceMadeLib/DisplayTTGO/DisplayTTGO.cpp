@@ -64,6 +64,9 @@ void DisplayTTGO::disable(){
     selectBlackScreen();
     refresh();
 }
+bool DisplayTTGO::isEnabled(){
+    return enabled;
+}
 
 void DisplayTTGO::refresh(){
 
@@ -136,7 +139,8 @@ void DisplayTTGO::refresh(){
             // Redraw dynamic field if changes have been made
             else if (   (lockScreenData[0] != lockScreenData_prev[0]) ||                // If either temp, hum or press has ben updated 
                         (lockScreenData[1] != lockScreenData_prev[1]) ||
-                        (lockScreenData[2] != lockScreenData_prev[2])){
+                        (lockScreenData[2] != lockScreenData_prev[2]) ||
+                        (displayNumber != displayNumber_prev)){
                 tft.fillRect(1,80,133,18,TFT_BLACK);                            // Clear relevant part of screen
                 tft.drawCentreString(String(lockScreenData[0],1),   23, 80, 2); // Print temperature to monitor
                 tft.drawCentreString(String(lockScreenData[1],1),   67, 80, 2); // Print humidity to monitor
@@ -157,7 +161,8 @@ void DisplayTTGO::refresh(){
                 tft.drawCentreString("No GPS data", 67, 180, 2);
             }
             else if ((lockScreenData[3] != lockScreenData_prev[3]) ||           // If either lat or lng has been updated
-                (lockScreenData[4] != lockScreenData_prev[4])){
+                    (lockScreenData[4] != lockScreenData_prev[4]) ||
+                    (displayNumber != displayNumber_prev)){
                 tft.fillRect(1,180,133,18,TFT_BLACK);                           // Clear relevant part of screen
                 tft.drawCentreString(gpsData, 67, 180, 2);                      // Print position on monitor
             }
@@ -169,7 +174,8 @@ void DisplayTTGO::refresh(){
                 tft.fillRect(1,220,133,18,TFT_BLACK);                           // Clear relevant part of screen
                 tft.drawCentreString("No GPS data", 67, 220, 2);
             }
-            else if (lockScreenData[5] != lockScreenData_prev[5]){              // If alt has been updated
+            else if ((lockScreenData[5] != lockScreenData_prev[5]) ||
+                    (displayNumber != displayNumber_prev)){              // If alt has been updated
                 tft.fillRect(1,220,133,18,TFT_BLACK);                           // Clear relevant part of screen
                 tft.drawCentreString(String(lockScreenData[5],1), 67, 220, 2);  // Print altitude on monitor
             }
@@ -190,6 +196,11 @@ void DisplayTTGO::refresh(){
         min_prev = minute(); 
         displayNumber_prev = displayNumber;
         batteryPercent_prev = batteryPercent;
+
+        // Comparator for next scan
+        for (int i = 0; i<10; i++){
+            str_prev[i] = str[i];
+        }
     }
 
 }
@@ -331,10 +342,7 @@ void DisplayTTGO::drawMessageScreenStrings(){
         tft.drawCentreString(str[9],67, 220,  2);
     }
 
-    // Comparator for next scan
-    for (int i = 0; i<10; i++){
-        str_prev[i] = str[i];
-    }
+    
 }
 void DisplayTTGO::drawMaster(){
     

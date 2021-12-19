@@ -22,12 +22,17 @@ const int i2cBME280Adr =    0x76;       // BME280 adress
 const int psGPS =           17;         // Power supply pin for GPS sensor
 const int rxGPS =           13;         // Serial recieve pin GPS
 const int txGPS =           12;         // Serial transmit pin GPS
+const int gpsCheckHour1 =   1; 
+const int gpsCheckHour2 =   0; 
+int       gpsReconAttempts = 5;
 
 // RF module
 const int rxRF =            27;         // Serial recieve pin RF
 const int txRF =            26;         // Serial transmit pin RF
 const int psRFTX =          32;         // Power supply radio transmitter
 const int psRFRX =          33;         // Power supply radio reciever
+int fetchSlaveDataAttempts =5;          // Amount of times unit should try to fetch slave data 
+int getIDAttempts =         5;          // Amount of times slave will try to get ID when awake
 
 
 // Buttons
@@ -137,5 +142,5 @@ const char *WIFI_PASS = "ClusterNet";                                   // WiFi 
 
 
 #define TIME_TO_SLEEP 30       // Time ESP32 will sleep for (in seconds)
-#define TIME_TO_SLEEP_CHECK 6000 // How often to check if the contitions for sleep mode are met
+#define TIME_TO_SLEEP_CHECK 20 // How often to check if the contitions for sleep mode are met
 
