@@ -174,7 +174,7 @@ void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, f
   }
   
   // GPS data treatment
-  char gpsData[1000] = "";
+  char gpsData[50] = "";
   // Format latitude and longitude in a string
   sprintf(gpsData, "\"lat\":%.6f, \"lng\":%.6f", lat, lng);
 
@@ -183,6 +183,11 @@ void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, f
   if (t   != 0.0)                 ubidots.add("Temperature",        t               );  // Generate / update temperature variable in Ubidots
   if (h   != 0.0)                 ubidots.add("Humidity",           h               );  // Generate / update humidity variable in Ubidots
   if (p   != 0.0)                 ubidots.add("Pressure [hPa]",     p               );  // Generate / update pressure variable in Ubidots
+  
+  ubidots.publish(id.c_str()); 
+  ubidots.loop();
+  delay(1000);
+  
   if (batt!= 0.0)                 ubidots.add("Battery",            batt            );  // Generate / update altitude variable in Ubidots
   if (alt != 0.0)                 ubidots.add("Altitude",           alt             );  // Generate / update altitude variable in Ubidots
   if ((lat!= 0.0) && (lng != 0.0))ubidots.add("gps",                1,      gpsData );  // Generate / update GPS variable in Ubidots
@@ -209,7 +214,7 @@ bool ubiPubData(String ID, float* Data){
                     Data[BATPERC ]); // Battery Percent
     ubiPubTS = millis();
     Serial.println("Data published to ubi");
-    Serial.println(Data[BATPERC]);
+    Serial.println(Data[LAT]);
     return true;
   }
   return false;
