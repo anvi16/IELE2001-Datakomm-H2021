@@ -360,7 +360,7 @@ void commLoop(){
               macSlave[numbOfSlaves-1] = msgStr;
               EEPROM.writeString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC * numbOfSlaves-1, msgStr);   // Store slave device mac address
               EEPROM.write(numbOfSlaves, NUMB_OF_SLAVES_ADDRESS);                                   // Store number of slaves addressed
-              //EEPROM.commit();
+              if(EEPROM_COMMIT) EEPROM.commit();
             }
             else numbOfSlaves--;
           }
@@ -375,7 +375,7 @@ void commLoop(){
               if(CCom.send(msgStr.c_str(), 0, CCom.ID, i+1))                            // Address from 2
               {
                 EEPROM.writeString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC * (i-1), msgStr);   // Store slave device mac address
-                //EEPROM.commit();
+                if(EEPROM_COMMIT) EEPROM.commit();
               }
             }
             else CCom.send("full", 0, CCom.ID);
@@ -385,7 +385,7 @@ void commLoop(){
             if(msgStr == "delete") 
             { 
               EEPROM.writeString(MAC_ADDRESS_SLAVE_START + SIZE_OF_MAC *(from -2), "FF:FF:FF:FF:FF:FF");   // Delete device
-              //EEPROM.commit();
+              if(EEPROM_COMMIT) EEPROM.commit();
             }
           }
         }
@@ -553,7 +553,7 @@ void setup() {
       
       if (master) EEPROM.write(CONFIG_STATE, MASTER);
       else        EEPROM.write(CONFIG_STATE, SLAVE);
-      EEPROM.commit();
+      if(EEPROM_COMMIT) EEPROM.commit();
       break;}
     
     
@@ -974,7 +974,7 @@ void loop(){
         for (int i = 0; i < EEPROM_SIZE; i++) {
           EEPROM.write(i, 255);
         }
-        EEPROM.commit();
+        if(EEPROM_COMMIT) EEPROM.commit();
         delay(500); 
         ESP.restart();
       }

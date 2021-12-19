@@ -38,6 +38,9 @@
 #ifndef DEBUG 
 	#define DEBUG
 #endif
+#ifndef EEPROM_COMMIT
+	#define EEPROM_COMMIT 1
+#endif
 
 
 class ClusterCom {

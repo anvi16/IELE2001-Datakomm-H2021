@@ -253,7 +253,7 @@ void ClusterCom::setId(uint8_t id, bool storeInEeprom)
     if (storeInEeprom)
     {
         EEPROM.write(id, _idEepromAddress);
-        //EEPROM.commit();
+        if(EEPROM_COMMIT) EEPROM.commit();
     }
 }
 
