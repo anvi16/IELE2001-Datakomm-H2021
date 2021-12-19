@@ -6,7 +6,6 @@
 #define uS_TO_S_FACTOR 1000000ULL /* C onversion factor for micro seconds to seconds */
 #define mS_TO_S_FACTOR 1000
 
-
 //////////////////////////////////////////////////////
 //                                                  //
 //                  DEFINE HARDWARE                 //
@@ -46,6 +45,7 @@ const int backLight =       4;          // HW pin for display backlight
 const int batteryPin =      36;         // HW pin for monitoring battery
 
 // Set up eeprom storage
+#define EEPROM_COMMIT 1
 #define EEPROM_SIZE 400
 #define SIZE_OF_MAC 18
 
@@ -87,9 +87,13 @@ static const uint32_t GPSBaud = 9600;
 
 
 // Milliseconds given to user when selecting master/slave
-int selTime = 10 * mS_TO_S_FACTOR;
+int selTime =                       10 * mS_TO_S_FACTOR;
 
-unsigned long timeDataFetchSlaves = 180 * mS_TO_S_FACTOR;
+// Time to loop before attempting to get data from slaves
+unsigned long timeWaitFetchSlaves = 240 * mS_TO_S_FACTOR;
+
+// Maximum time used for trying to get data from slaves
+unsigned long timeDataFetchSlaves = 120 * mS_TO_S_FACTOR;
 
 
 //////////////////////////////////////////////////////
@@ -105,8 +109,7 @@ unsigned long timeDataFetchSlaves = 180 * mS_TO_S_FACTOR;
 
 // Publish variables
 const char *UBIDOTS_TOKEN = "BBFF-pzGZkRPVMO7baDRylwiST623Ow5DrF";      // Token corresponding to IELET2001 2021 gr30
-const char *DEVICE_LABEL = "Aalesund";                                  // Ubidots: Device label to which data will be published
-const int ubiPubFreq = 2*1000;                                         // Ubidots: Publish rate (ms between pub)
+const int ubiPubFreq =      2 * mS_TO_S_FACTOR;                         // Ubidots: Publish rate (ms between pub)
 unsigned long ubiPubTS;                                                 // Ubidots: Timestamp for last publish
 
 
@@ -131,8 +134,6 @@ const char *WIFI_PASS = "ClusterNet";                                   // WiFi 
 //////////////////////////////////////////////////////
 
 #define ALLOWED_SLAVES 10
-
-
 
 //////////////////////////////////////////////////////
 //                                                  //

@@ -164,7 +164,7 @@ void UbisoftCallback(char *topic, byte *payload, unsigned int length)
   Serial.println();
 }
 
-void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, float alt, int batt){
+void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, float alt, float batt){
 
   // Connection
   if (!ubidots.connected()){                  // Reconnect to ubidots if not connected
@@ -183,12 +183,9 @@ void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, f
   if (t   != 0.0)                 ubidots.add("Temperature",        t               );  // Generate / update temperature variable in Ubidots
   if (h   != 0.0)                 ubidots.add("Humidity",           h               );  // Generate / update humidity variable in Ubidots
   if (p   != 0.0)                 ubidots.add("Pressure [hPa]",     p               );  // Generate / update pressure variable in Ubidots
-  ubidots.publish(id.c_str());                       // Publish buffer to Ubidots
-  ubidots.loop();
-
   if (batt!= 0.0)                 ubidots.add("Battery",            batt            );  // Generate / update altitude variable in Ubidots
   if (alt != 0.0)                 ubidots.add("Altitude",           alt             );  // Generate / update altitude variable in Ubidots
-  if ((lat!= 0.0) && (lng != 0))  ubidots.add("gps",                1,      gpsData );  // Generate / update GPS variable in Ubidots
+  if ((lat!= 0.0) && (lng != 0.0))ubidots.add("gps",                1,      gpsData );  // Generate / update GPS variable in Ubidots
 
   ubidots.publish(id.c_str());                       // Publish buffer to Ubidots
   Serial.print("Unit ID data pub UBI: ");
@@ -244,6 +241,11 @@ bool dataFetchLoop(bool getGPS){
     sensorData[LAT]     = gps.getLatitude();      // Latitude
     sensorData[LNG]     = gps.getLongitude();     // Longitude
     sensorData[ALT]     = gps.getAltitude();      // Altitude
+
+    #ifdef DEBUG
+      if ((sensorData[LAT] == 0.0) || (sensorData[LNG] == 0.0)) Serial.println("GPS data missing");
+    #endif
+
   }
   unit.refresh();                                 // Update data from unit (battery state)
   sensorData[TEMP]    = ws.getTempC();            // Temperature
@@ -739,13 +741,14 @@ void loop(){
   if(hour() != hour_prev) hourChange = true;
 
   // Update data from unit
-  dataIsReady = dataFetchLoop((hour() == gpsCheckHour1)||(hour() == gpsCheckHour2));    // Get gps data only when the hour says 12. Returns true when requested data is updated
+  // dataIsReady = dataFetchLoop((hour() == gpsCheckHour1)||(hour() == gpsCheckHour2));    // Get gps data only when the hour says 12. Returns true when requested data is updated
+  dataIsReady = dataFetchLoop(true);    // Get gps data only when the hour says 12. Returns true when requested data is updated
 
   // Update display
   displayLoop();
   
   // If year is not updated, do not continue until GPS has updated time and date (To be able so sync units)
-  if ((year()<= 2020) && (gpsReconAttempts > 0)){
+  if ((year()<= 2020) && (millis() - setupTime < timeWaitFetchSlaves)){
     
     int scan = 0;
     int totScan = 30 * 10;                        // Run loop for 30 seconds to see if GPS data is recieved
@@ -826,12 +829,11 @@ void loop(){
         }
       } 
 
-      // Fetch data from slaves 
-      uint16_t timeout = 120 * uS_TO_S_FACTOR; //Leave 2 minutes to slaves to fetch data
+   
 
       // Don't fetch data right after boot,
       // and check if any slaves are set up
-      if((millis() - setupTime) > timeout && numbOfSlaves && retryFetchSlaveData){ 
+      if((millis() - setupTime) > timeWaitFetchSlaves && numbOfSlaves && retryFetchSlaveData){ 
       
         /* // Fetch data from slave units
           -- Request data from the given slave number
@@ -964,7 +966,7 @@ void loop(){
     }
   
     // Go to deep sleep if unit has attempted to get data from other units for x amount of seconds
-    if ((hourChange || timerWakeup) && ((millis() - setupTime > timeDataFetchSlaves) || millisRollover)){
+    if ((hourChange || timerWakeup) && ((millis() - setupTime > (timeWaitFetchSlaves + timeDataFetchSlaves)) || millisRollover)){
       Serial.println("Sending unit to deep sleep");
       display.disable();                          // Turn display off to save power
       goToDeepSleep();                            // Enter deep sleep. Wakeup calculated to be at next full hour
