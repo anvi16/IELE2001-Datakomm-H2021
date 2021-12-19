@@ -50,6 +50,7 @@ bool RHReliableDatagram::sendtoWait(uint8_t* buf, uint8_t len, uint8_t address)
     // Assemble the message
     uint8_t thisSequenceNumber = ++_lastSequenceNumber;
     uint8_t retries = 0;
+	uint32_t time = 0;
     while (retries++ <= _retries)
     {
 	setHeaderId(thisSequenceNumber);
@@ -68,7 +69,7 @@ bool RHReliableDatagram::sendtoWait(uint8_t* buf, uint8_t len, uint8_t address)
             headerFlagsToSet = RH_FLAGS_RETRY;
         }
         setHeaderFlags(headerFlagsToSet, headerFlagsToClear);
-
+	time = millis();
 	sendto(buf, len, address);
 	waitPacketSent();
 
@@ -96,6 +97,8 @@ bool RHReliableDatagram::sendtoWait(uint8_t* buf, uint8_t len, uint8_t address)
 		uint8_t from, to, id, flags;
 		if (recvfrom(0, 0, &from, &to, &id, &flags)) // Discards the message
 		{
+			Serial.print(time-millis());
+			Serial.println(" - delay in read after transmitt 1");
 			/* Serial.print("Flag rx: ");
 			Serial.println(flags);
 
@@ -118,11 +121,15 @@ bool RHReliableDatagram::sendtoWait(uint8_t* buf, uint8_t len, uint8_t address)
 		    else if (   !(flags & RH_FLAGS_ACK)
 				&& (id == _seenIds[from]))
 		    {
-			delay(10);			// This is a request we have already received. ACK it again
+			// This is a request we have already received. ACK it again
 			acknowledge(id, from);
 		    }
+
 		    // Else discard it
 		}
+		Serial.print(time-millis());
+		Serial.println(" - delay in read after transmitt 2");
+		break;
 	    }
 	    // Not the one we are waiting for, maybe keep waiting until timeout exhausted
 	    YIELD;
@@ -161,7 +168,6 @@ bool RHReliableDatagram::recvfromAck(uint8_t* buf, uint8_t* len, uint8_t* from, 
 			// Its for this node and
 		// Its not a broadcast, so ACK it
 		// Acknowledge message with ACK set in flags and ID set to received ID
-		delay(10);
 		acknowledge(_id, _from);
 	    }
             // Filter out retried messages that we have seen before. This explicitly
@@ -222,6 +228,7 @@ void RHReliableDatagram::acknowledge(uint8_t id, uint8_t from)
     // So we send an ACK of 1 octet
     // REVISIT: should we send the RSSI for the information of the sender?
     uint8_t ack = '!';
+	//delay(100);
     sendto(&ack, sizeof(ack), from); 
     waitPacketSent();
 }
