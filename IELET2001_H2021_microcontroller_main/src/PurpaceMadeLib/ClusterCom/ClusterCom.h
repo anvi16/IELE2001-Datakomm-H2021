@@ -1,7 +1,7 @@
 /*
  Name:		ClusterCom.h
  Created:	11/8/2021 12:46:13 PM
- Author:	Andreas Vik
+ Author:	
  Editor:	http://www.visualmicro.com
 */
 

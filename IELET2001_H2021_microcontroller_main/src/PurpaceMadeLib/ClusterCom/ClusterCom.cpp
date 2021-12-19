@@ -1,7 +1,7 @@
 /*
  Name:		ClusterCom.cpp
  Created:	11/8/2021 12:46:13 PM
- Author:	Andreas Vik
+ Author:	
  Editor:	http://www.visualmicro.com
 */
 
@@ -9,7 +9,7 @@
 
 
 ClusterCom::ClusterCom(uint8_t pinRx, uint8_t pinTx, uint8_t pwrRx, uint8_t pwrTx, uint32_t serialBaud, uint8_t id) :
-	rfCom(2000, pinRx, pinTx, 0),
+	rfCom(2000, pinRx, pinTx, pwrTx),
     driver(rfCom, aes128),
     manager(driver, id)
 {
@@ -279,7 +279,7 @@ void ClusterCom::enable(){
     #ifdef DEBUG
         Serial.println("Enabling radio transmission modules");
     #endif
-    digitalWrite(_pwrTx, HIGH);               // Powering up radio transmission module
+    //digitalWrite(_pwrTx, HIGH);               // Powering up radio transmission module / Handeled by Radiohead lib
     digitalWrite(_pwrRx, HIGH);               // Powering up radio reciever module
     #ifdef DEBUG
         Serial.println("Radio transmission modules powered up");
@@ -292,7 +292,7 @@ void ClusterCom::disable(){
     #ifdef DEBUG
         Serial.println("Disabling radio transmission modules");
     #endif
-    digitalWrite(_pwrTx, LOW);               // Powering down radio transmission module
+    //digitalWrite(_pwrTx, LOW);               // Powering down radio transmission module, / Handeled by Radiohead lib
     digitalWrite(_pwrRx, LOW);               // Powering down radio reciever module
     #ifdef DEBUG
         Serial.println("Radio transmission modules powered down");

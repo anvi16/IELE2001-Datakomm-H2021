@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define uS_TO_S_FACTOR 1000000 /* C onversion factor for micro seconds to seconds */
+#define uS_TO_S_FACTOR 1000000ULL /* C onversion factor for micro seconds to seconds */
 #define mS_TO_S_FACTOR 1000
 
 
@@ -22,9 +22,9 @@ const int i2cBME280Adr =    0x76;       // BME280 adress
 const int psGPS =           17;         // Power supply pin for GPS sensor
 const int rxGPS =           13;         // Serial recieve pin GPS
 const int txGPS =           12;         // Serial transmit pin GPS
-const int gpsCheckHour1 =   1; 
-const int gpsCheckHour2 =   0; 
-int       gpsReconAttempts = 5;
+const int gpsCheckHour1 =   19;         // First hour that GPS data should be obtained and sent to Ubidots
+const int gpsCheckHour2 =   20;         // Second hour that GPS data should be obtained and sent to Ubidots
+int       gpsReconAttempts = 5;         // Amount of attempts unit will try to recieve GPS data before giving up
 
 // RF module
 const int rxRF =            27;         // Serial recieve pin RF
@@ -36,14 +36,14 @@ int getIDAttempts =         5;          // Amount of times slave will try to get
 
 
 // Buttons
-const int btnS1 =           0;
-const int btnS2 =           35;
+const int btnS1 =           0;          // HW pin for button 1
+const int btnS2 =           35;         // HW pin for button 2
 
 // Display
-const int backLight =       4;
+const int backLight =       4;          // HW pin for display backlight
 
 // Battery surveilance
-const int batteryPin =      36;
+const int batteryPin =      36;         // HW pin for monitoring battery
 
 // Set up eeprom storage
 #define EEPROM_SIZE 400
