@@ -29,9 +29,6 @@
 #ifndef ID_EEPROME_ADDRESS
 	#define ID_EEPROME_ADDRESS 100
 #endif
-#ifndef MASTER_ID_EEPROME_ADDRESS
-	#define MASTER_ID_EEPROME_ADDRESS 101
-#endif
 #ifndef EEPROM_SIZE 
 	#define EEPROM_SIZE 200
 #endif
@@ -59,7 +56,7 @@ class ClusterCom {
 
 	ClusterCom(uint8_t pinRx = 27, uint8_t pinTx = 26, uint8_t pwrRx = 25, uint8_t pwrTx = 33, uint32_t serialBaud = 9600, uint8_t id = 0);
 
-	void begin(const char* encryptkey = nullptr, uint16_t eepromSize = EEPROM_SIZE, uint16_t idEepromAddress = ID_EEPROME_ADDRESS, uint16_t masterIdEepromAddress = MASTER_ID_EEPROME_ADDRESS);
+	void begin(const char* encryptkey = nullptr, uint16_t eepromSize = EEPROM_SIZE, uint16_t idEepromAddress = ID_EEPROME_ADDRESS);
 	bool send(const char* msg, uint8_t receiver, MT mt, uint8_t id = 0);
 	bool send(float msg, uint8_t receiver, MT mt, uint8_t id = 0);
 	bool available(uint8_t *mt, String *msgStr, float *msgFloat, uint8_t* id);
@@ -103,7 +100,6 @@ class ClusterCom {
 	uint8_t _id; // Device id
 
 	uint16_t _idEepromAddress;
-	uint16_t _masterIdEepromAddress;
 
 };
 #endif

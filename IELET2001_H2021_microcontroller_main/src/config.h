@@ -58,8 +58,7 @@ enum CONFIG : uint8_t
 };
 
 #define NUMB_OF_SLAVES_ADDRESS 10       // Max amount of slaves that can be associated with Master
-#define ID_EEPROME_ADDRESS 100
-#define MASTER_ID_EEPROME_ADDRESS 101
+#define ID_EEPROME_ADDRESS 11
 #define MAC_ADDRESS_SLAVE_START 200
 
 

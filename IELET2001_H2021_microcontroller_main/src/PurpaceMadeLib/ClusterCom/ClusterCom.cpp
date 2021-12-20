@@ -23,17 +23,16 @@ ClusterCom::ClusterCom(uint8_t pinRx, uint8_t pinTx, uint8_t pwrRx, uint8_t pwrT
 }
 
 // Encryption string must be 16 + 5 prefix char long
-void ClusterCom::begin(const char* encryptkey, uint16_t eepromSize, uint16_t idEepromAddress, uint16_t masterIdEepromAddress)
+void ClusterCom::begin(const char* encryptkey, uint16_t eepromSize, uint16_t idEepromAddress)
 {
     _idEepromAddress = idEepromAddress;
-    _masterIdEepromAddress = idEepromAddress;
 
     if(!Serial) Serial.begin(_serialBaud);
     pinMode(_pwrTx,OUTPUT);     // Set pinmode for control of power supply transmitter
     pinMode(_pwrRx,OUTPUT);     // Set pinmode for control of power supply reciever
     
     manager.init();
-    manager.setTimeout(1000);
+    manager.setTimeout(1500);
 
     EEPROM.begin(eepromSize);
 
@@ -52,6 +51,7 @@ void ClusterCom::begin(const char* encryptkey, uint16_t eepromSize, uint16_t idE
         // Use predefined encryptkey to library
         aes128.setKey(_encryptkey, sizeof(_encryptkey));
 }
+
 
 bool ClusterCom::send(const char* msg, uint8_t receiver, MT mt, uint8_t id)
 {
@@ -120,31 +120,8 @@ bool ClusterCom::send(float msgFloat, const char* msgStr, uint8_t receiver, MT m
 
 bool ClusterCom::available(uint8_t* mt, String* msgStr, float* msgFloat, uint8_t* id)
 {
-    digitalWrite(_pwrRx, HIGH);
-
-    uint8_t from;
-    uint8_t len = sizeof(_buf);
-
-    //if (manager.available())
-    //{
-        // Check for message addressed to client
-        if (manager.recvfromAck(_buf, &len, &from))
-        {
-			#ifdef DEBUG
-	            Serial.print("got request from : 0x");
-	            Serial.print(from, HEX);
-	            Serial.print(": ");
-	            Serial.println((char*)_buf);
-            #endif
-            
-            *id = from;
-            readRecivedData(mt, msgStr, msgFloat);
-            return true;
-        }
-    //}
-    return false;
+    available(mt, msgStr, msgFloat, id, 0);
 }
-
 
 
 bool ClusterCom::available(uint8_t* mt, String* msgStr, float* msgFloat, uint8_t* id, uint16_t wait)
@@ -153,20 +130,26 @@ bool ClusterCom::available(uint8_t* mt, String* msgStr, float* msgFloat, uint8_t
     uint8_t len = sizeof(_buf);
 
     // Wait for a message addressed to client
-    if (manager.recvfromAckTimeout(_buf, &len, wait, &from))
+    if(wait) 
     {
-        #ifdef DEBUG
-            Serial.print("got request from : 0x");
-            Serial.print(from, HEX);
-            Serial.print(": ");
-            Serial.println((char*)_buf);
-        #endif
-        
-        *id = from;
-        readRecivedData(mt, msgStr, msgFloat);
-        return true;
+        if (!manager.recvfromAckTimeout(_buf, &len, wait, &from)) return false;
     }
-    return false;
+    else   
+    {  
+        if(manager.available())
+            if (!manager.recvfromAck(_buf, &len, &from)) return false;
+    }
+    
+    #ifdef DEBUG
+        Serial.print("got request from : 0x");
+        Serial.print(from, HEX);
+        Serial.print(": ");
+        Serial.println((char*)_buf);
+    #endif
+            
+    *id = from;
+    readRecivedData(mt, msgStr, msgFloat);
+    return true;
 }
 
 
@@ -206,7 +189,6 @@ bool ClusterCom::reciveId(String mac)
             return true;
         }
     }
-    //digitalWrite(_pwrRx, LOW);
     return false;
 }
 
@@ -227,7 +209,6 @@ bool ClusterCom::getId()
     String mac = WiFi.macAddress();
 
     if(!send(mac.c_str(), masterId, ID)) return false;
-    delay(200);
 
     while(!reciveId(mac)) 
     {
