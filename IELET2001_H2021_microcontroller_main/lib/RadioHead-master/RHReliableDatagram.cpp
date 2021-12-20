@@ -119,8 +119,6 @@ bool RHReliableDatagram::sendtoWait(uint8_t* buf, uint8_t len, uint8_t address)
 		    {
 			// This is a request we have already received. ACK it again
 			acknowledge(id, from);
-			acknowledge(id, from);
-			acknowledge(id, from);
 		    }
 
 		    // Else discard it
@@ -163,8 +161,6 @@ bool RHReliableDatagram::recvfromAck(uint8_t* buf, uint8_t* len, uint8_t* from, 
 			// Its for this node and
 		// Its not a broadcast, so ACK it
 		// Acknowledge message with ACK set in flags and ID set to received ID
-		acknowledge(_id, _from);
-		acknowledge(_id, _from);
 		acknowledge(_id, _from);
 	    }
             // Filter out retried messages that we have seen before. This explicitly
@@ -225,7 +221,7 @@ void RHReliableDatagram::acknowledge(uint8_t id, uint8_t from)
     // So we send an ACK of 1 octet
     // REVISIT: should we send the RSSI for the information of the sender?
     uint8_t ack = '!';
-	//delay(100);
+	delay(300);
     sendto(&ack, sizeof(ack), from); 
     waitPacketSent();
 }
