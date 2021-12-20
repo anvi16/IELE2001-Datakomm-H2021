@@ -157,7 +157,7 @@ bool ClusterCom::available(uint8_t* mt, String* msgStr, float* msgFloat, uint8_t
 bool ClusterCom::reciveId(String mac)
 {
     uint8_t from;
-    uint16_t wait = 1000;   // Wait max 1sec
+    uint16_t wait = 1500*3;   // Wait max timeout time for acknowledgement and numb of retransmits
     uint8_t len = sizeof(_buf);
 	
     // Wait for a message addressed to client

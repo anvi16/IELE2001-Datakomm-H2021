@@ -292,10 +292,8 @@ void displayLoop(){
 
 bool getSlaveData(uint8_t slaveUnit, float* slaveData){
 
-  
-
   bool     err  = false;
-  uint16_t wait = 1000;  // 1sec
+  uint16_t wait = 1500*3;  // Wait max timeout time for acknowledgement and numb of retransmits
   uint8_t  i    = 0;
 
   String dataName[] = {"temp", "hum", "press", "lat", "lng", "alt", "batperc"};
