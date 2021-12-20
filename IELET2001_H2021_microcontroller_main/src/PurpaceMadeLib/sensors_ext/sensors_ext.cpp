@@ -61,7 +61,6 @@ GPS::GPS(int baudGPS, long baudSerial, int pinPS, int pinTx, int pinRx):
 void GPS::enable(){
 
     enabled = true;
-
     enableStartTS = millis();                  // Set timestamp for function call
     
     #ifdef DEBUG

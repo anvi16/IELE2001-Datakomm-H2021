@@ -110,13 +110,13 @@ void DisplayTTGO::refresh(){
     ****************************************/
 
     // Black Screen
-    if (displayNumber == 0){                        // Black Screen
-        digitalWrite(_pinBL, LOW);                  // Turn off backlight on display
+    if (displayNumber == 0){                                                    // Black Screen
+        digitalWrite(_pinBL, LOW);                                              // Turn off backlight on display
     }
 
     if (enabled){
         // Lock Screen
-        if (displayNumber == 1){                   // Lock Screen
+        if (displayNumber == 1){                                                // Lock Screen
             
             tft.setTextColor(TFT_WHITE);
             tft.setTextSize(1);
@@ -132,12 +132,12 @@ void DisplayTTGO::refresh(){
             // If no data is available, print "?"
             if((lockScreenData[0] == 0.0) && (lockScreenData[1] == 0.0) && (lockScreenData[2] == 0.0)){
                 tft.fillRect(1,80,133,18,TFT_BLACK);                            // Clear relevant part of screen
-                tft.drawCentreString("?", 23, 80, 2); // Print temperature to monitor
-                tft.drawCentreString("?", 67, 80, 2); // Print humidity to monitor
-                tft.drawCentreString("?", 111,80, 2); // Print pressure to monitor
+                tft.drawCentreString("?", 23, 80, 2);                           // Print temperature to monitor
+                tft.drawCentreString("?", 67, 80, 2);                           // Print humidity to monitor
+                tft.drawCentreString("?", 111,80, 2);                           // Print pressure to monitor
             }
             // Redraw dynamic field if changes have been made
-            else if (   (lockScreenData[0] != lockScreenData_prev[0]) ||                // If either temp, hum or press has ben updated 
+            else if (   (lockScreenData[0] != lockScreenData_prev[0]) ||        // If either temp, hum or press has ben updated 
                         (lockScreenData[1] != lockScreenData_prev[1]) ||
                         (lockScreenData[2] != lockScreenData_prev[2]) ||
                         (displayNumber != displayNumber_prev)){
@@ -148,8 +148,8 @@ void DisplayTTGO::refresh(){
             }
             
             // Format latitude and longitude in a string
-            char gpsData[30] = "";
-            sprintf(gpsData, "%.3fN, %.3fE", lockScreenData[3], lockScreenData[4]);
+            char gpsData[50] = "";                                              // Char array for storing formatted string containing lat and long
+            sprintf(gpsData, "%.3fN, %.3fE", lockScreenData[3], lockScreenData[4]); // Format string giving lat and long
             
             // POSITION
             tft.drawCentreString("Position", 67, 140,  4);
@@ -175,7 +175,7 @@ void DisplayTTGO::refresh(){
                 tft.drawCentreString("No GPS data", 67, 220, 2);
             }
             else if ((lockScreenData[5] != lockScreenData_prev[5]) ||
-                    (displayNumber != displayNumber_prev)){              // If alt has been updated
+                    (displayNumber != displayNumber_prev)){                     // If alt has been updated
                 tft.fillRect(1,220,133,18,TFT_BLACK);                           // Clear relevant part of screen
                 tft.drawCentreString(String(lockScreenData[5],1), 67, 220, 2);  // Print altitude on monitor
             }
@@ -188,7 +188,7 @@ void DisplayTTGO::refresh(){
         }
         
         // Message screen
-        else if (displayNumber == 2){                               // Generic message screen
+        else if (displayNumber == 2){                                           // Generic message screen
             drawMessageScreenStrings();
         }
 
@@ -197,7 +197,7 @@ void DisplayTTGO::refresh(){
         displayNumber_prev = displayNumber;
         batteryPercent_prev = batteryPercent;
 
-        // Comparator for next scan
+        // Comparator for checking strings next scan
         for (int i = 0; i<10; i++){
             str_prev[i] = str[i];
         }
@@ -212,47 +212,51 @@ void DisplayTTGO::setLockScreenData(float t, float h, float p, float lat, float 
     
     // Temp, hum, press, lat, lng, alt
 
-    lockScreenData[0] = t;                          // Temperature
-    lockScreenData[1] = h;                          // Humidity
-    lockScreenData[2] = p;                          // Pressure
-    lockScreenData[3] = lat;                        // Latitude
-    lockScreenData[4] = lng;                        // Longitude
-    lockScreenData[5] = alt;                        // Altitude
+    lockScreenData[0] = t;                                                      // Temperature
+    lockScreenData[1] = h;                                                      // Humidity
+    lockScreenData[2] = p;                                                      // Pressure
+    lockScreenData[3] = lat;                                                    // Latitude
+    lockScreenData[4] = lng;                                                    // Longitude
+    lockScreenData[5] = alt;                                                    // Altitude
 
 }
 void DisplayTTGO::setString(int nLine, String text){
-    str[nLine] = text;
+    str[nLine] = text;                                                          // Fills string into correct space in string array. MEssage on screen is written from this array
 }
 void DisplayTTGO::clearStrings(){
-    for (int i = 0; i < 10; i++){
+    for (int i = 0; i < 10; i++){                                               // Set all stored strings to ""
         str[i] = "";
     }
 }
 void DisplayTTGO::setMaster(){
-    master = true;
+    master = true;                                                              // Inform object that unit is master
 }
 void DisplayTTGO::setUbi(){
-    ubi = true;
+    ubi = true;                                                                 // Inform object that unit is connected to Ubidots
 }
 void DisplayTTGO::resetUbi(){
-    ubi = false;
+    ubi = false;                                                                // Inform obect that unit is no longer connected to Ubidots
 }
 
 
-// Private
+// Function for drawing current battery percentage in top right corner of screen
 void DisplayTTGO::drawBatteryState(int percent){
 
-    tft.fillRect(76,4,59,10,TFT_BLACK);
+    // Clear field where battery is displayed, so no overlap occurs
+    tft.fillRect(76,4,59,10,TFT_BLACK);                                         
 
-    tft.drawRoundRect(110,4,24,10,1,TFT_WHITE);
+    // Draw battery outline
+    tft.drawRoundRect(110,4,24,10,1,TFT_WHITE);                                 
     tft.fillRect(108,6,2,6,TFT_WHITE);
 
+    // Write battery percentage
     tft.setTextColor(TFT_WHITE);
     tft.setTextSize(1);
     tft.setCursor(101, 6);
     tft.drawNumber(percent, 76, 1, 2);
     tft.print("%");
 
+    // Show cells in battery corresponding to battery percentage
     if (percent > 67){
         tft.fillRect(112,6,6,6,TFT_WHITE);
     }
@@ -271,13 +275,17 @@ void DisplayTTGO::drawBatteryState(int percent){
     }
 };
 void DisplayTTGO::drawTime(){
+    
+    // Read current time from unit
     int _hour = hour();
     int _min = minute();
     int xpos = 5;
     int ypos = 1;
 
+    // Clear field on display containing the time to avoid overlap
     tft.fillRect(1, 1, 42, 15, TFT_BLACK);
 
+    // Write current time in top left corner
     tft.setTextSize(1);
     tft.setTextColor(TFT_WHITE);
     if (_hour < 10) xpos += tft.drawChar('0', xpos, ypos, 2);   // Add hours leading zero for 24 hr clock
@@ -289,6 +297,8 @@ void DisplayTTGO::drawTime(){
 }
 void DisplayTTGO::drawMessageScreenStrings(){
 
+    // Draw strings on message screen
+    
     tft.setTextSize(1);
     tft.setTextColor(TFT_WHITE);
     
@@ -346,6 +356,7 @@ void DisplayTTGO::drawMessageScreenStrings(){
 }
 void DisplayTTGO::drawMaster(){
     
+    // Drawing master symbol in top bar if unit is configured as master
     tft.fillRoundRect(45, 1, 13, 13, 1, TFT_WHITE);
     tft.setTextColor(TFT_BLACK);
     tft.drawString("M", 47, 0, 2);
@@ -354,6 +365,7 @@ void DisplayTTGO::drawMaster(){
 
 void DisplayTTGO::drawUbi(){
     
+    // Draw Ubidots symbol in top bar if connected to Ubidots
     tft.fillRoundRect(60, 1, 12, 13, 1, TFT_WHITE);
     tft.setTextColor(TFT_BLACK);
     tft.drawString("U", 62, 0, 2);

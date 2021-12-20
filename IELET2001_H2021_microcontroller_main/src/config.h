@@ -45,11 +45,11 @@ const int backLight =       4;          // HW pin for display backlight
 const int batteryPin =      36;         // HW pin for monitoring battery
 
 // Set up eeprom storage
-#define EEPROM_COMMIT 1
-#define EEPROM_SIZE 400
-#define SIZE_OF_MAC 18
+#define EEPROM_COMMIT 1                 // True because unit should save some data to EEPROM
+#define EEPROM_SIZE 400                 // Size allocated to probram in EEPROM
+#define SIZE_OF_MAC 18                  // Lenght of MAC-adress
 
-#define CONFIG_STATE 2
+#define CONFIG_STATE 2                  // Adress where Master / Slave / Not previously configured is stored
 enum CONFIG : uint8_t
 {
     NOT     = 255,
@@ -57,7 +57,7 @@ enum CONFIG : uint8_t
     SLAVE   = 2
 };
 
-#define NUMB_OF_SLAVES_ADDRESS 10
+#define NUMB_OF_SLAVES_ADDRESS 10       // Max amount of slaves that can be associated with Master
 #define ID_EEPROME_ADDRESS 100
 #define MASTER_ID_EEPROME_ADDRESS 101
 #define MAC_ADDRESS_SLAVE_START 200
@@ -133,7 +133,7 @@ const char *WIFI_PASS = "ClusterNet";                                   // WiFi 
 //                                                  //
 //////////////////////////////////////////////////////
 
-#define ALLOWED_SLAVES 10
+#define ALLOWED_SLAVES 10                                               // Number of slaves allowed for each Master
 
 //////////////////////////////////////////////////////
 //                                                  //
@@ -142,6 +142,5 @@ const char *WIFI_PASS = "ClusterNet";                                   // WiFi 
 //////////////////////////////////////////////////////
 
 
-#define TIME_TO_SLEEP 30       // Time ESP32 will sleep for (in seconds)
 #define TIME_TO_SLEEP_CHECK 20 // How often to check if the contitions for sleep mode are met
 

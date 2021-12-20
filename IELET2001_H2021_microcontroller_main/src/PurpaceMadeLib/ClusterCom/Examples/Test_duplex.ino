@@ -1,7 +1,7 @@
 /*
  Name:		LibraryCreater.ino
  Created:	11/9/2021 3:56:20 PM
- Author:	Andreas Vik
+ Author:	
  */
 
 #include "ClusterCom.h"

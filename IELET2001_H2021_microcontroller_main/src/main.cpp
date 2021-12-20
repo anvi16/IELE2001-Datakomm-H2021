@@ -31,6 +31,7 @@ esp_sleep_wakeup_cause_t wakeup_reason;
 hw_timer_t *hw_timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
+// Variables for monitoring time change
 unsigned long millis_prev = 0;
 bool          millisRollover = false;
 int           hour_prev = 0;
@@ -104,24 +105,6 @@ bool retryFetchSlaveData = true;                  // Master is trying to fetch d
 * Sleep Mode Functions
 ****************************************/
 
-
-
-
-/* 
-void IRAM_ATTR ISRbuttonTimer()
-{
-  buttonTS = millis();
-  buttonPress = true;
-}
- */
-
-
-
-
-
-
-
-
 // Functionaly the same as the "delay()" function.
 // However, instead of just waiting, the unit is put into light sleep to save power
 void espDelay(int ms)
@@ -155,13 +138,6 @@ void UbisoftCallback(char *topic, byte *payload, unsigned int length)
   for (int i = 0; i < length; i++) {
     callbackPayload.concat((char)payload[i]);
   }
-  // Serial.println(callbackPayload);
-
-  // for (int i = 0; i < length; i++)
-  // {
-  //   Serial.print((char)payload[i]);
-  // }
-  Serial.println();
 }
 
 void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, float alt, float batt){
@@ -205,13 +181,13 @@ bool ubiPubData(String ID, float* Data){
 // Publish data fethed from slave unit
   if (ubidots.connected() && (millisRollover || ((millis() - ubiPubTS) > ubiPubFreq))){
     ubiPubWeather(  ID,
-                    Data[TEMP    ],  // Temp
-                    Data[HUM     ],  // Hum
-                    Data[PRESS   ],  // Press
-                    Data[LAT     ],  // Latitude
-                    Data[LNG     ],  // Longitude
-                    Data[ALT     ],  // Altitude
-                    Data[BATPERC ]); // Battery Percent
+                    Data[TEMP    ],               // Temp
+                    Data[HUM     ],               // Hum
+                    Data[PRESS   ],               // Press
+                    Data[LAT     ],               // Latitude
+                    Data[LNG     ],               // Longitude
+                    Data[ALT     ],               // Altitude
+                    Data[BATPERC ]);              // Battery Percent
     ubiPubTS = millis();
     Serial.println("Data published to ubi");
     Serial.println(Data[LAT]);
@@ -231,7 +207,7 @@ bool ubiPubData(String ID, float* Data){
  * AUX
 ****************************************/
 
-// Gathers all necessarry data and returns "true" if data is gathered successfully
+// Gathers all necessarry data to be published to Ubidots and returns "true" if data is gathered successfully
 bool dataFetchLoop(bool getGPS){
   
   #ifdef DEBUG
@@ -451,9 +427,9 @@ void commLoop(){
         break;
 
 
-      case CCom.DATA:     // Handle data from device 
+      case CCom.DATA:                             // Handle data from device 
 
-        if(master)        // Data from slave
+        if(master)                                // Data from slave
         {
           if(msgStr)   Serial.println(msgStr);
           if(msgFloat) Serial.println(msgFloat);
@@ -508,17 +484,10 @@ void commLoop(){
 ****************************************/
 void setup() {
   delay(1000);
-
+  
+  // Set up EEPROM
   EEPROM.begin(EEPROM_SIZE);
   
-  // Enable hardware timer for wakeup
-  /*
-  hw_timer = timerBegin(3, 80, true);
-  timerAttachInterrupt(hw_timer, &onTimer, true);
-  timerAlarmWrite(hw_timer, 1000000, true);
-  timerAlarmEnable(hw_timer);
-  */
-
   // Enable wakeup button
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_35, 0);
 
