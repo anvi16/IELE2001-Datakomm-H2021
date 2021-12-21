@@ -13,6 +13,9 @@
 #include <Wire.h>
 #include <EEPROM.h>
 #include <JC_Button.h>
+#include <stdlib.h>
+#include <time.h>
+
 
 // Include files with dependencies
 #include "PurpaceMadeLib/sensors_ext/sensors_ext.h" // File containging classes related to peripheral sensors (GPS, temp, hum, press)
@@ -142,6 +145,9 @@ void UbisoftCallback(char *topic, byte *payload, unsigned int length)
 
 void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, float alt, float batt){
 
+  // Wait for a random amount of time to avoid collisions in Ubidots
+  delay(random(0, 15 * mS_TO_S_FACTOR));
+
   // Connection
   if (!ubidots.connected()){                  // Reconnect to ubidots if not connected
       ubidots.reconnect();
@@ -160,9 +166,9 @@ void ubiPubWeather(String id, float t, float h, float p, float lat, float lng, f
   if (h   != 0.0)                 ubidots.add("Humidity",           h               );  // Generate / update humidity variable in Ubidots
   if (p   != 0.0)                 ubidots.add("Pressure [hPa]",     p               );  // Generate / update pressure variable in Ubidots
   
-  ubidots.publish(id.c_str()); 
-  ubidots.loop();
-  delay(1000);
+  //ubidots.publish(id.c_str()); 
+  //ubidots.loop();
+  //delay(2000);
   
   if (batt!= 0.0)                 ubidots.add("Battery",            batt            );  // Generate / update altitude variable in Ubidots
   if (alt != 0.0)                 ubidots.add("Altitude",           alt             );  // Generate / update altitude variable in Ubidots
@@ -212,7 +218,7 @@ bool dataFetchLoop(bool getGPS){
   
   #ifdef DEBUG
     Serial.println("Data fetch from sensors");
-    if (getGPS) Serial.println("GPS included");
+    if (getGPS) Serial.println("GPS data included in request");
   #endif
   
   bool _dataOK[8] = {false, false, false, false, false, false, false, false};
@@ -261,7 +267,7 @@ void displayLoop(){
   #ifdef DEBUG
     Serial.println("Display loop called");
     Serial.print("Temperature: ");
-    Serial.print(sensorData[TEMP]);               // Sample variable to be printet to show what is read
+    Serial.print(sensorData[TEMP]);               // Sample variable to be printed to show what is read
   #endif
   
   display.selectLockScreen();
@@ -291,8 +297,6 @@ void displayLoop(){
 ****************************************/
 
 bool getSlaveData(uint8_t slaveUnit, float* slaveData){
-
-  
 
   bool     err  = false;
   uint16_t wait = 1000;  // 1sec
@@ -696,7 +700,6 @@ void setup() {
 void loop(){
 
   // Fool program to think it has been woken and should publish data
-  timerWakeup = true;
   bool okToSleep = true;                          // Will be set to false during loop by program parts that need it
   
   if (S2.read()) {buttonTS = millis(); buttonPress = true;} 
@@ -1013,8 +1016,6 @@ void loop(){
   if (gps.isEnabled() && dataIsReady && (year() > 2020)){
     gps.disable();
   }
-
-  Serial.println("Loop active");
 
   // End procedure. Check for hour change and millis rollover
   millis_prev = millis();

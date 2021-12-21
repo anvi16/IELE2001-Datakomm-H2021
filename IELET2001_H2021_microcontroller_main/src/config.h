@@ -21,8 +21,8 @@ const int i2cBME280Adr =    0x76;       // BME280 adress
 const int psGPS =           17;         // Power supply pin for GPS sensor
 const int rxGPS =           13;         // Serial recieve pin GPS
 const int txGPS =           12;         // Serial transmit pin GPS
-const int gpsCheckHour1 =   19;         // First hour that GPS data should be obtained and sent to Ubidots
-const int gpsCheckHour2 =   20;         // Second hour that GPS data should be obtained and sent to Ubidots
+const int gpsCheckHour1 =   2;          // First hour that GPS data should be obtained and sent to Ubidots (02.00 at night)
+const int gpsCheckHour2 =   14;         // Second hour that GPS data should be obtained and sent to Ubidots (14.00 at day)
 int       gpsReconAttempts = 5;         // Amount of attempts unit will try to recieve GPS data before giving up
 
 // RF module
@@ -45,11 +45,11 @@ const int backLight =       4;          // HW pin for display backlight
 const int batteryPin =      36;         // HW pin for monitoring battery
 
 // Set up eeprom storage
-#define EEPROM_COMMIT 1                 // True because unit should save some data to EEPROM
-#define EEPROM_SIZE 400                 // Size allocated to probram in EEPROM
-#define SIZE_OF_MAC 18                  // Lenght of MAC-adress
+#define EEPROM_COMMIT       1           // True because unit should save some data to EEPROM
+#define EEPROM_SIZE         400         // Size allocated to probram in EEPROM
+#define SIZE_OF_MAC         18          // Lenght of MAC-adress
 
-#define CONFIG_STATE 2                  // Adress where Master / Slave / Not previously configured is stored
+#define CONFIG_STATE        2           // Adress where Master / Slave / Not previously configured is stored
 enum CONFIG : uint8_t
 {
     NOT     = 255,
